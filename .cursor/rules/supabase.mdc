@@ -1,0 +1,50 @@
+---
+description: Best practices for using Supabase with Next.js SSR
+globs: src/**/*.tsx, src/**/*.ts, src/utils/supabase/*.ts
+---
+
+# Supabase with Next.js SSR Best Practices
+
+Use the `@supabase/ssr` package and follow these patterns for Client and Server side usage.
+
+## 1. Client and Server Clients
+
+Always use the appropriate client creator from `src/utils/supabase/`:
+
+- **Client Components**: Use `createClient` from `@/utils/supabase/client`.
+- **Server Components / Server Actions / Route Handlers**: Use `createClient` from `@/utils/supabase/server`.
+
+### Example (Server Component):
+```typescript
+import { createClient } from '@/utils/supabase/server'
+
+export default async function Page() {
+  const supabase = await createClient()
+  const { data: posts } = await supabase.from('posts').select()
+  return <div>...</div>
+}
+```
+
+## 2. Type Safety
+
+Always use generated TypeScript types for Supabase.
+
+```typescript
+import { Database } from '@/types/supabase'
+const supabase = createClient<Database>()
+```
+
+## 3. Auth & Session Management
+
+- Use **Middleware** to refresh the user's session.
+- Prefer `supabase.auth.getUser()` over `supabase.auth.getSession()` on the server for security (it validates the user with the Supabase API).
+
+## 4. Environment Variables
+
+Always use `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+## 5. Fetching Strategy
+
+- Fetch data as close to where it's needed as possible.
+- Use Server Components for initial data fetching to reduce client-side JavaScript.
+- Combine with TanStack Query on the client for real-time updates or complex state management.

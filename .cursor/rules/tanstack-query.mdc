@@ -1,0 +1,52 @@
+---
+description: Best practices for using TanStack Query in Next.js
+globs: src/**/*.tsx, src/**/*.ts, src/hooks/**/*.ts
+---
+
+# TanStack Query (React Query) Best Practices
+
+Always follow these rules when using TanStack Query to ensure consistency and efficiency.
+
+## 1. Efficient Query Key Management
+
+Use a "Query Key Factory" pattern to centralize and manage query keys. This avoids typos and makes invalidation easier.
+
+### Recommended Pattern:
+Create a `keys.ts` file or define them near the hooks.
+
+```typescript
+export const postKeys = {
+  all: ['posts'] as const,
+  lists: () => [...postKeys.all, 'list'] as const,
+  list: (filters: string) => [...postKeys.lists(), { filters }] as const,
+  details: () => [...postKeys.all, 'detail'] as const,
+  detail: (id: string) => [...postKeys.details(), id] as const,
+}
+```
+
+## 2. Use Custom Hooks
+
+Encapsulate `useQuery` and `useMutation` in custom hooks.
+
+```typescript
+export function usePosts(filters: string) {
+  return useQuery({
+    queryKey: postKeys.list(filters),
+    queryFn: () => fetchPosts(filters),
+  })
+}
+```
+
+## 3. Server Components & Hydration
+
+When using TanStack Query with Server Components, use the `dehydrate` and `HydrationBoundary` pattern.
+
+1. Prefetch data on the server.
+2. Dehydrate the state.
+3. Wrap client components in `HydrationBoundary`.
+
+## 4. Error Handling & Loading
+
+- Use `ErrorBoundary` for handling query errors where appropriate.
+- Prefer `isLoading` for initial loads and `isFetching` for background updates.
+- Use `useSuspenseQuery` for a better DX with Next.js Suspense.
