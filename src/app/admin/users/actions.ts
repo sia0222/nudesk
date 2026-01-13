@@ -1,11 +1,10 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js'
-import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '@/utils/supabase/constants'
+import { createClient } from '@/utils/supabase/client'
 
 /**
- * 인력 등록 (관리자용 유저 생성)
- * 클라이언트 세션에 영향을 주지 않기 위해 service_role 키를 사용한 별도 클라이언트로 처리합니다.
+ * 인력 등록 (직접 데이터베이스 저장)
+ * Rules.md 준수: Supabase Auth 미사용, 직접 profiles 테이블에 저장
  */
 export async function registerUserAction(formData: {
   username: string
@@ -13,49 +12,48 @@ export async function registerUserAction(formData: {
   role: 'ADMIN' | 'STAFF' | 'CUSTOMER'
   password: string
 }) {
-  // admin 권한을 가진 별도 클라이언트 생성
-  const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+  console.log('[registerUserAction] Starting user registration:', formData.username)
+
+  const supabase = createClient()
+
+  try {
+    // 1. 사용자명 중복 체크
+    console.log('[registerUserAction] Checking username uniqueness...')
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', formData.username)
+      .single()
+
+    if (existingUser) {
+      console.error('[registerUserAction] Username already exists:', formData.username)
+      throw new Error('이미 존재하는 사용자명입니다.')
     }
-  })
 
-  const email = `${formData.username}@nudesk.local`
+    // 2. Profiles 테이블에 직접 저장 (Rules.md 준수)
+    console.log('[registerUserAction] Inserting user into profiles table...')
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        username: formData.username,
+        password: formData.password, // 평문 저장 (개발 단계)
+        full_name: formData.full_name,
+        role: formData.role,
+        is_approved: true // 관리자가 직접 등록한 유저는 자동 승인
+      })
+      .select()
+      .single()
 
-  // 1. Auth 유저 생성
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email: email,
-    password: formData.password,
-    email_confirm: true,
-    user_metadata: {
-      username: formData.username,
-      full_name: formData.full_name
+    if (error) {
+      console.error('[registerUserAction] Database insertion error:', error)
+      throw new Error(error.message)
     }
-  })
 
-  if (authError) {
-    console.error('Auth User Creation Error:', authError)
-    throw new Error(authError.message)
+    console.log('[registerUserAction] User registration successful:', data.username)
+    return { success: true, data }
+
+  } catch (error: any) {
+    console.error('[registerUserAction] Registration failed:', error)
+    throw error
   }
-
-  // 2. Profiles 테이블에 정보 입력
-  const { error: profileError } = await supabaseAdmin
-    .from('profiles')
-    .insert({
-      id: authData.user.id,
-      username: formData.username,
-      full_name: formData.full_name,
-      role: formData.role,
-      is_approved: true // 관리자가 직접 등록한 유저는 자동 승인
-    })
-
-  if (profileError) {
-    console.error('Profile Creation Error:', profileError)
-    // Auth 유저는 생성되었으나 프로필 생성 실패 시 롤백 로직이 필요할 수 있음
-    await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-    throw new Error(profileError.message)
-  }
-
-  return { success: true }
 }
