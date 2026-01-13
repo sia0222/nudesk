@@ -69,7 +69,7 @@ export function useCreateProject() {
       if (memberIds && memberIds.length > 0) {
         const membersToInsert = memberIds.map(profileId => ({
           project_id: project.id,
-          profile_id: profileId
+          user_id: profileId
         }))
 
         const { error: membersError } = await supabase
@@ -116,7 +116,7 @@ export function useUpdateProject() {
       if (memberIds && memberIds.length > 0) {
         const membersToInsert = memberIds.map(profileId => ({
           project_id: id,
-          profile_id: profileId
+          user_id: profileId
         }))
 
         const { error: membersError } = await supabase
@@ -147,7 +147,7 @@ export function useAddProjectMember() {
     mutationFn: async ({ projectId, profileId }: { projectId: string, profileId: string }) => {
       const { error } = await supabase
         .from('project_members')
-        .insert([{ project_id: projectId, profile_id: profileId }])
+        .insert([{ project_id: projectId, user_id: profileId }])
 
       if (error) throw error
     },
@@ -169,7 +169,7 @@ export function useRemoveProjectMember() {
         .from('project_members')
         .delete()
         .eq('project_id', projectId)
-        .eq('profile_id', profileId)
+        .eq('user_id', profileId)
 
       if (error) throw error
     },

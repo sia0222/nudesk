@@ -6,6 +6,7 @@ import { registerUserAction } from '@/app/admin/users/actions'
 export const adminKeys = {
   all: ['admin'] as const,
   allUsers: () => [...adminKeys.all, 'all-users'] as const,
+  projectUsers: () => [...adminKeys.all, 'project-users'] as const,
 }
 
 export function useAllUsers() {
@@ -17,6 +18,24 @@ export function useAllUsers() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .order('role', { ascending: true })
+
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+export function useProjectUsers() {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: adminKeys.projectUsers(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('role', 'MASTER') // MASTER 역할 제외
         .order('role', { ascending: true })
 
       if (error) throw error

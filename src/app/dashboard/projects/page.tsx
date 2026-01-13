@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useProjects, useCreateProject, useUpdateProject, useProjectMembers } from '@/hooks/use-projects'
-import { useAllUsers } from '@/hooks/use-admin'
+import { useProjectUsers } from '@/hooks/use-admin'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
@@ -51,13 +51,13 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
       const fetchMembers = async () => {
         const { data } = await supabase
           .from('project_members')
-          .select('profile_id')
+          .select('user_id')
           .eq('project_id', project.id)
         
         if (data) {
           setFormData(prev => ({
             ...prev,
-            memberIds: data.map(m => m.profile_id)
+            memberIds: data.map(m => m.user_id)
           }))
         }
       }
@@ -187,7 +187,7 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
 // --- 메인 페이지 컴포넌트 ---
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects()
-  const { data: allUsers } = useAllUsers()
+  const { data: allUsers } = useProjectUsers()
   const createProjectMutation = useCreateProject()
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
