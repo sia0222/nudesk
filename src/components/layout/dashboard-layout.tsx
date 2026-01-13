@@ -6,37 +6,57 @@ import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Home, LayoutGrid, Users, Briefcase, Settings, LogOut, Loader2 } from 'lucide-react'
-import { signOut } from '@/lib/authHelpers'
+import { signOut, getCurrentSession } from '@/lib/authHelpers'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/utils/supabase/client'
+import { useEffect, useState } from 'react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
   const queryClient = useQueryClient()
-  
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['my-profile'], // 유저별 고유 캐시를 위해 키 단순화 및 즉시 갱신 설정
-    queryFn: async () => {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) return null
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      if (error) return null
-      return data
-    },
-    staleTime: 0, // 권한 정보는 즉시 반영되도록 캐시 무효화
-  })
+  const supabase = createClient()
+  const [profile, setProfile] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // 세션 체크 및 프로필 로드
+  useEffect(() => {
+    const checkSession = async () => {
+      const session = getCurrentSession()
+      if (!session) {
+        router.replace('/login')
+        return
+      }
+
+      // 세션이 있으면 데이터베이스에서 최신 프로필 정보 가져오기
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.userId)
+          .single()
+
+        if (error) {
+          console.error('Profile fetch error:', error)
+          router.replace('/login')
+          return
+        }
+
+        setProfile(data)
+      } catch (error) {
+        console.error('Session check error:', error)
+        router.replace('/login')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    checkSession()
+  }, [router, supabase])
 
   const handleLogout = async () => {
     await signOut()
-    queryClient.clear() // 모든 캐시 삭제
+    queryClient.clear()
     router.replace('/login')
   }
 

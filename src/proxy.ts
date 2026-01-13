@@ -1,40 +1,25 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './utils/supabase/constants'
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
-    request: { headers: request.headers },
-  })
+  const path = request.nextUrl.pathname
+  console.log(`[Proxy] 🔍 Route check: ${path}`)
 
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    cookies: {
-      getAll() { return request.cookies.getAll() },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-        response = NextResponse.next({ request: { headers: request.headers } })
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
-      },
-    },
-  })
+  const isAuthPage = path === '/login'
+  const isSetupPage = path === '/setup'
+  const isProtectedPage = path.startsWith('/dashboard') ||
+                          path.startsWith('/admin') ||
+                          path === '/'
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const isAuthPage = request.nextUrl.pathname === '/login'
-  const isSetupPage = request.nextUrl.pathname === '/setup'
-  const isProtectedPage = request.nextUrl.pathname.startsWith('/dashboard') || 
-                          request.nextUrl.pathname.startsWith('/admin') ||
-                          request.nextUrl.pathname === '/'
-
-  if (isProtectedPage && !user && !isSetupPage) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // 세션 검증은 클라이언트 사이드에서 수행하므로 여기서는 기본적인 라우팅만
+  if (isProtectedPage && !isSetupPage) {
+    console.log(`[Proxy] 🛡️ Protected route: ${path}`)
   }
 
-  if (isAuthPage && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (isAuthPage) {
+    console.log(`[Proxy] 🔓 Auth page: ${path}`)
   }
 
-  return response
+  return NextResponse.next()
 }
 
 export const config = {

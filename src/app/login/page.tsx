@@ -9,8 +9,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2, Lock, User } from 'lucide-react'
-import { motion } from 'framer-motion'
-
 export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -22,12 +20,15 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      console.log('[Login] Attempting sign in with:', username)
       const { profile } = await signInWithUsername(username, password)
+      console.log('[Login] Sign in successful:', profile)
       toast.success(`${profile.full_name}님, 환영합니다!`)
-      
+
       // 모든 유저는 통합 대시보드(Home)로 진입
       router.push('/dashboard')
     } catch (error: any) {
+      console.error('[Login] Error:', error)
       toast.error(error.message || '로그인에 실패했습니다.')
     } finally {
       setIsLoading(false)
@@ -35,23 +36,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200 p-4 dark:from-zinc-900 dark:to-zinc-950">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-[400px]"
-      >
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+      <div className="w-full max-w-[400px]">
         <div className="mb-8 text-center">
-          <motion.div 
-            initial={{ rotate: -10 }}
-            animate={{ rotate: 0 }}
-            className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-2xl mb-4"
-          >
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-2xl mb-4">
             <Lock className="h-8 w-8" />
-          </motion.div>
-          <h1 className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-white">NuDesk</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium">실무 참여형 스마트 관리 시스템</p>
+          </div>
+          <h1 className="text-4xl font-black tracking-tighter text-gray-900">NuDesk</h1>
+          <p className="text-gray-600 font-medium">실무 참여형 스마트 관리 시스템</p>
         </div>
 
         <Card className="border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:bg-zinc-900/50 backdrop-blur-sm">
@@ -112,7 +104,7 @@ export default function LoginPage() {
         <p className="mt-8 text-center text-sm text-zinc-500">
           계정이 없으신가요? <span className="text-primary font-semibold cursor-pointer hover:underline">관리자에게 문의하세요</span>
         </p>
-      </motion.div>
+      </div>
     </div>
   )
 }

@@ -21,44 +21,62 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useTickets, useCreateTicket } from "@/hooks/use-tickets"
 import { useQuery } from "@tanstack/react-query"
+import { getCurrentSession } from "@/lib/authHelpers"
 
 export default function TicketsPage() {
   const supabase = createClient()
   const [isOpen, setIsOpen] = useState(false)
-  
+
   const [formData, setFormData] = useState({
     title: '',
+    description: '',
     project_id: '',
     category: '기타' as '수정요청' | '자료요청' | '기타',
-    content: '',
-    is_urgent: false,
+    priority: '보통',
   })
 
-  // 1. 내 프로필 및 소속 프로젝트 정보 조회
+  // 1. 현재 세션 확인
+  const session = getCurrentSession()
+
+  // 2. 내 프로필 정보 조회
   const { data: profile, isLoading: isProfileLoading } = useQuery({
     queryKey: ['my-profile'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
-      const { data } = await supabase.from('profiles').select('*, memberships:project_members(project_id)').eq('id', user.id).single()
+      if (!session) return null
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.userId)
+        .single()
       return data
-    }
+    },
+    enabled: !!session
   })
 
-  // 2. 내가 참여 중인 프로젝트 목록 조회
+  // 3. 내가 참여 중인 프로젝트 목록 조회
   const { data: myProjects } = useQuery({
-    queryKey: ['my-projects', profile?.id],
+    queryKey: ['my-projects', session?.userId],
     queryFn: async () => {
-      if (!profile) return []
-      let query = supabase.from('projects').select('*')
-      if (profile.role !== 'MASTER' && profile.role !== 'ADMIN') {
-        const projectIds = profile.memberships?.map((m: any) => m.project_id) || []
-        query = query.in('id', projectIds)
-      }
-      const { data } = await query
-      return data || []
+      if (!session) return []
+
+      // 참여 중인 프로젝트 ID 목록 가져오기
+      const { data: memberships } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', session.userId)
+
+      if (!memberships || memberships.length === 0) return []
+
+      // 프로젝트 상세 정보 가져오기
+      const projectIds = memberships.map(m => m.project_id)
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('*')
+        .in('id', projectIds)
+
+      return projects || []
     },
-    enabled: !!profile
+    enabled: !!session
   })
 
   // 3. 티켓 목록 조회 (커스텀 훅 사용)
@@ -71,11 +89,11 @@ export default function TicketsPage() {
       toast.error('프로젝트를 선택해주세요.')
       return
     }
-    
+
     createTicketMutation.mutate(formData, {
       onSuccess: () => {
         setIsOpen(false)
-        setFormData({ title: '', project_id: '', category: '기타', content: '', is_urgent: false })
+        setFormData({ title: '', description: '', project_id: '', category: '기타', priority: '보통' })
       }
     })
   }
@@ -171,29 +189,27 @@ export default function TicketsPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Content</Label>
-                  <Textarea 
-                    placeholder="상세 내용을 입력하세요" 
+                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Description</Label>
+                  <Textarea
+                    placeholder="상세 내용을 입력하세요"
                     className="min-h-[140px] rounded-2xl border-zinc-100 bg-zinc-50/50 font-bold px-5 py-4"
-                    value={formData.content}
-                    onChange={e => setFormData({...formData, content: e.target.value})}
+                    value={formData.description}
+                    onChange={e => setFormData({...formData, description: e.target.value})}
                   />
                 </div>
 
-                <div 
-                  className={cn(
-                    "flex items-center gap-3 p-5 rounded-2xl border transition-all cursor-pointer",
-                    formData.is_urgent ? "bg-red-50 border-red-100" : "bg-zinc-50 border-zinc-100"
-                  )}
-                  onClick={() => setFormData({...formData, is_urgent: !formData.is_urgent})}
-                >
-                  <div className={cn(
-                    "h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all",
-                    formData.is_urgent ? "bg-red-500 border-red-500" : "bg-white border-zinc-200"
-                  )}>
-                    {formData.is_urgent && <Zap className="h-3.5 w-3.5 text-white fill-white" />}
-                  </div>
-                  <Label className={cn("font-black cursor-pointer", formData.is_urgent ? "text-red-600" : "text-zinc-400")}>🚨 긴급 요청건입니다.</Label>
+                <div className="grid gap-2">
+                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Priority</Label>
+                  <Select onValueChange={(v: any) => setFormData({...formData, priority: v})} defaultValue="보통">
+                    <SelectTrigger className="h-14 rounded-2xl border-zinc-100 bg-zinc-50/50 font-bold px-5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
+                      <SelectItem value="낮음" className="font-bold py-3">🟢 낮음</SelectItem>
+                      <SelectItem value="보통" className="font-bold py-3">🟡 보통</SelectItem>
+                      <SelectItem value="높음" className="font-bold py-3">🔴 높음</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

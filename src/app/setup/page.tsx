@@ -23,13 +23,13 @@ export default function SetupPage() {
     try {
       addLog('🔧 수리 엔진 가동 시작...')
       
-      // 관리자 권한 클라이언트 생성
+      // 일반 클라이언트 생성 (Supabase Auth 사용하지 않음)
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
         auth: { autoRefreshToken: false, persistSession: false }
       })
 
-      addLog('📡 Supabase 서버 연결 확인 중...')
-      
+      addLog('📡 데이터베이스 연결 확인 중...')
+
       const testUsers = [
         { un: 'nubiz', pw: '3345', role: 'MASTER', name: '대표 마스터' },
         { un: 'admin', pw: '3346', role: 'ADMIN', name: '운영 관리자' },
@@ -38,50 +38,41 @@ export default function SetupPage() {
       ]
 
       for (const u of testUsers) {
-        const email = `${u.un}@nudesk.local`
-        addLog(`👤 계정 생성 시도: ${u.un} (${u.role})`)
+        addLog(`👤 사용자 생성 시도: ${u.un} (${u.role})`)
 
-        // 1. 기존 유저가 있는지 확인하고 삭제 후 재생성 (가장 확실한 방법)
-        const { data: listData } = await supabase.auth.admin.listUsers()
-        const existingUser = listData?.users.find(user => user.email === email)
-        
-        if (existingUser) {
-          addLog(`♻️ 기존 계정 발견, 재설정 중: ${u.un}`)
-          await supabase.auth.admin.deleteUser(existingUser.id)
-        }
+        // 1. 기존 사용자가 있는지 확인하고 삭제 후 재생성
+        const { data: existingUsers } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('username', u.un)
 
-        // 2. Auth 계정 생성
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email,
-          password: u.pw,
-          email_confirm: true,
-          user_metadata: { username: u.un, full_name: u.name }
-        })
-
-        if (authError) {
-          addLog(`❌ Auth 생성 실패: ${u.un} - ${authError.message}`)
-          continue
-        }
-
-        // 3. 프로필 정보 생성
-        if (authData.user) {
-          const { error: profileError } = await supabase
+        if (existingUsers && existingUsers.length > 0) {
+          addLog(`♻️ 기존 사용자 발견, 삭제 중: ${u.un}`)
+          await supabase
             .from('profiles')
-            .upsert({
-              id: authData.user.id,
-              username: u.un,
-              full_name: u.name,
-              role: u.role,
-              is_approved: true
-            })
+            .delete()
+            .eq('username', u.un)
+        }
 
-          if (profileError) {
-            addLog(`⚠️ 프로필 생성 실패 (스키마 에러 가능성): ${profileError.message}`)
-            // 만약 여기서 "querying schema" 에러가 나면, 
-            // 이는 SQL Editor에서 권한 쿼리를 한 번은 실행해야 함을 의미합니다.
-          } else {
-            addLog(`✅ 계정 생성 완료: ${u.un}`)
-          }
+        // 2. 프로필 정보 생성 (Supabase Auth 사용하지 않음)
+        const userId = crypto.randomUUID() // 임시 UUID 생성
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            username: u.un,
+            password: u.pw, // 실제 운영에서는 bcrypt 해시화 필수
+            full_name: u.name,
+            role: u.role,
+            is_approved: true
+          })
+
+        if (profileError) {
+          addLog(`❌ 사용자 생성 실패: ${u.un} - ${profileError.message}`)
+          continue
+        } else {
+          addLog(`✅ 사용자 생성 완료: ${u.un}`)
         }
       }
 

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/utils/supabase/client'
 import { toast } from 'sonner'
+import { getCurrentSession } from '@/lib/authHelpers'
 
 export const ticketKeys = {
   all: ['tickets'] as const,
@@ -16,15 +17,32 @@ export function useTickets(filters?: any) {
   return useQuery({
     queryKey: ticketKeys.list(filters),
     queryFn: async () => {
+      const session = getCurrentSession()
+      if (!session) throw new Error('로그인이 필요합니다.')
+
       let query = supabase
         .from('tickets')
         .select(`
           *,
-          customer:customer_id(full_name, username),
-          assigned:assigned_staff_id(full_name, username),
+          requester:requester_id(full_name, username),
+          assigned:assigned_to(full_name, username),
           project:project_id(name)
         `)
         .order('created_at', { ascending: false })
+
+      // 현재 사용자가 참여 중인 프로젝트의 티켓만 조회
+      const { data: memberships } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', session.userId)
+
+      if (memberships && memberships.length > 0) {
+        const projectIds = memberships.map(m => m.project_id)
+        query = query.in('project_id', projectIds)
+      } else {
+        // 참여 중인 프로젝트가 없으면 빈 결과 반환
+        return []
+      }
 
       if (filters?.status) query = query.eq('status', filters.status)
       if (filters?.project_id) query = query.eq('project_id', filters.project_id)
@@ -42,15 +60,15 @@ export function useCreateTicket() {
 
   return useMutation({
     mutationFn: async (newTicket: any) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('인증되지 않은 사용자입니다.')
+      const session = getCurrentSession()
+      if (!session) throw new Error('로그인이 필요합니다.')
 
       const { data, error } = await supabase
         .from('tickets')
-        .insert([{ 
-          ...newTicket, 
-          customer_id: user.id,
-          status: 'WAITING' 
+        .insert([{
+          ...newTicket,
+          requester_id: session.userId,
+          status: 'WAITING'
         }])
         .select()
         .single()
@@ -74,16 +92,15 @@ export function useAcceptTicket() {
 
   return useMutation({
     mutationFn: async ({ ticketId, deadline }: { ticketId: string, deadline: string }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('인증되지 않은 사용자입니다.')
+      const session = getCurrentSession()
+      if (!session) throw new Error('로그인이 필요합니다.')
 
       const { error } = await supabase
         .from('tickets')
-        .update({ 
-          status: 'ACCEPTED', 
-          assigned_staff_id: user.id,
-          deadline: deadline,
-          is_auto_assigned: false
+        .update({
+          status: 'ACCEPTED',
+          assigned_to: session.userId,
+          deadline: deadline
         })
         .eq('id', ticketId)
 
