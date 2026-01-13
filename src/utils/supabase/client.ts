@@ -1,8 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants'
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  // 환경 변수 아예 무시하고 constants.ts 값만 사용
+  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 }
