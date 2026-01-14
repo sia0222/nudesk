@@ -17,6 +17,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- 3. 기존 테이블 삭제
 DROP TABLE IF EXISTS public.chats CASCADE;
 DROP TABLE IF EXISTS public.delay_requests CASCADE;
+DROP TABLE IF EXISTS public.ticket_assignees CASCADE; -- 추가
 DROP TABLE IF EXISTS public.tickets CASCADE;
 DROP TABLE IF EXISTS public.project_members CASCADE;
 DROP TABLE IF EXISTS public.projects CASCADE;
@@ -26,13 +27,14 @@ DROP TYPE IF EXISTS ticket_status CASCADE;
 DROP TYPE IF EXISTS ticket_category CASCADE;
 DROP TYPE IF EXISTS request_status CASCADE;
 DROP TYPE IF EXISTS project_type CASCADE;
+DROP TYPE IF EXISTS receipt_type CASCADE; -- 추가
 
 -- 4. 타입 정의
 CREATE TYPE user_role AS ENUM ('MASTER', 'ADMIN', 'STAFF', 'CUSTOMER');
 CREATE TYPE ticket_status AS ENUM ('WAITING', 'ACCEPTED', 'IN_PROGRESS', 'DELAYED', 'COMPLETED');
-CREATE TYPE ticket_category AS ENUM ('수정요청', '자료요청', '기타');
 CREATE TYPE request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE project_type AS ENUM ('개발', '유지');
+CREATE TYPE receipt_type AS ENUM ('온라인', '전화', '팩스', '이메일'); -- 추가
 
 -- 5. 테이블 생성 (Supabase Auth 제거)
 CREATE TABLE public.profiles (
@@ -70,15 +72,30 @@ CREATE TABLE public.tickets (
     title TEXT NOT NULL,
     description TEXT,
     status ticket_status NOT NULL DEFAULT 'WAITING',
-    category ticket_category NOT NULL DEFAULT '기타',
+    category TEXT NOT NULL DEFAULT '수정', -- 유연한 카테고리 관리를 위해 TEXT로 변경
+    receipt_type receipt_type DEFAULT '온라인',
     priority TEXT DEFAULT '보통',
     project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
     requester_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL, -- 호환성 유지
+    end_date DATE,
+    is_emergency BOOLEAN DEFAULT FALSE,
+    emergency_date DATE,
+    emergency_reason TEXT,
+    file_urls TEXT[] DEFAULT '{}', -- 다중 파일 지원
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deadline TIMESTAMPTZ,
     completed_at TIMESTAMPTZ
+);
+
+-- 다중 배정을 위한 중간 테이블
+CREATE TABLE public.ticket_assignees (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    ticket_id UUID REFERENCES public.tickets(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(ticket_id, user_id)
 );
 
 CREATE TABLE public.delay_requests (
@@ -102,11 +119,11 @@ CREATE TABLE public.chats (
 );
 
 -- 6. 테스트 데이터 삽입
-INSERT INTO public.profiles (id, username, password, full_name, role, is_approved) VALUES
-(gen_random_uuid(), 'nubiz', '3345', '대표 마스터', 'MASTER', true),
-(gen_random_uuid(), 'admin', '3346', '운영 관리자', 'ADMIN', true),
-(gen_random_uuid(), 'staff', '3347', '실무 직원', 'STAFF', true),
-(gen_random_uuid(), 'customer', '3348', '테스트 고객', 'CUSTOMER', true);
+INSERT INTO public.profiles (username, password, full_name, role, is_approved) VALUES
+('nubiz', '3345', '대표 마스터', 'MASTER', true),
+('admin', '3346', '운영 관리자', 'ADMIN', true),
+('staff', '3347', '실무 직원', 'STAFF', true),
+('customer', '3348', '테스트 고객', 'CUSTOMER', true);
 
 -- 7. 샘플 프로젝트
 INSERT INTO public.projects (name, description) VALUES
@@ -119,15 +136,13 @@ FROM public.projects p
 CROSS JOIN public.profiles pr;
 
 -- 9. 샘플 티켓
-INSERT INTO public.tickets (title, description, status, category, priority, project_id, requester_id, assigned_to) VALUES
-('로그인 기능 구현', '사용자 로그인 기능 구현 및 테스트', 'IN_PROGRESS', '수정요청', '높음',
+INSERT INTO public.tickets (title, description, status, category, project_id, requester_id) VALUES
+('로그인 기능 구현', '사용자 로그인 기능 구현 및 테스트', 'IN_PROGRESS', '🛠️ 오류 / 기능이 마음대로 작동하지 않아요',
  (SELECT id FROM public.projects LIMIT 1),
- (SELECT id FROM public.profiles WHERE username = 'customer'),
- (SELECT id FROM public.profiles WHERE username = 'staff')),
-('UI 디자인 개선', '대시보드 UI 개선 작업', 'WAITING', '수정요청', '보통',
+ (SELECT id FROM public.profiles WHERE username = 'customer')),
+('UI 디자인 개선', '대시보드 UI 개선 작업', 'WAITING', '🎨 수정 / 화면이 깨지거나 이상하게 보여요',
  (SELECT id FROM public.projects LIMIT 1),
- (SELECT id FROM public.profiles WHERE username = 'customer'),
- NULL);
+ (SELECT id FROM public.profiles WHERE username = 'customer'));
 
 -- 10. API 캐시 새로고침
 NOTIFY pgrst, 'reload schema';

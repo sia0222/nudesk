@@ -25,8 +25,8 @@ export function useTickets(filters?: any) {
         .select(`
           *,
           requester:requester_id(full_name, username),
-          assigned:assigned_to(full_name, username),
-          project:project_id(name)
+          project:project_id(name),
+          assignees:ticket_assignees(user_id, profiles(full_name, username))
         `)
         .order('created_at', { ascending: false })
 
@@ -40,7 +40,6 @@ export function useTickets(filters?: any) {
         const projectIds = memberships.map(m => m.project_id)
         query = query.in('project_id', projectIds)
       } else {
-        // 참여 중인 프로젝트가 없으면 빈 결과 반환
         return []
       }
 
@@ -59,22 +58,39 @@ export function useCreateTicket() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (newTicket: any) => {
+    mutationFn: async (formData: any) => {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
-      const { data, error } = await supabase
+      const { assigned_to_ids, files, ...ticketData } = formData;
+
+      // 1. 티켓 생성
+      const { data: ticket, error: ticketError } = await supabase
         .from('tickets')
         .insert([{
-          ...newTicket,
+          ...ticketData,
           requester_id: session.userId,
           status: 'WAITING'
         }])
         .select()
         .single()
 
-      if (error) throw error
-      return data
+      if (ticketError) throw ticketError
+
+      // 2. 다중 담당자 배정
+      if (assigned_to_ids && assigned_to_ids.length > 0) {
+        const assignees = assigned_to_ids.map((userId: string) => ({
+          ticket_id: ticket.id,
+          user_id: userId
+        }))
+        const { error: assigneeError } = await supabase
+          .from('ticket_assignees')
+          .insert(assignees)
+        
+        if (assigneeError) throw assigneeError
+      }
+
+      return ticket
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.lists() })
@@ -99,12 +115,17 @@ export function useAcceptTicket() {
         .from('tickets')
         .update({
           status: 'ACCEPTED',
-          assigned_to: session.userId,
           deadline: deadline
         })
         .eq('id', ticketId)
 
       if (error) throw error
+
+      // 수락한 사람을 담당자로 추가
+      await supabase.from('ticket_assignees').upsert({
+        ticket_id: ticketId,
+        user_id: session.userId
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.all })
