@@ -27,7 +27,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format, startOfDay, isWeekend } from "date-fns"
+import { format, startOfDay, isWeekend, differenceInDays } from "date-fns"
 import { ko } from "date-fns/locale"
 import { getBusinessDate, isBusinessDay, HOLIDAYS_2026 } from "@/lib/date-utils"
 
@@ -64,6 +64,20 @@ export default function TicketsPage() {
     emergency_reason: '',
     files: [] as { name: string, size: number, type: string }[] 
   })
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // 입력값이 변경될 때 에러 메시지 제거
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  }
 
   // 카테고리가 긴급일 때 긴급처리요청 강제 활성화 및 해제 방지
   useEffect(() => {
@@ -155,26 +169,40 @@ export default function TicketsPage() {
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault()
+    const newErrors: Record<string, string> = {};
+
     if (!formData.project_id) {
-      toast.error('프로젝트를 선택해주세요.')
-      return
+      newErrors.project_id = '프로젝트를 선택해주세요.';
     }
     if (!formData.category) {
-      toast.error('카테고리를 선택해주세요.')
-      return
+      newErrors.category = '접수 카테고리를 선택해주세요.';
     }
-
-    const minDate = formData.is_emergency ? dateLimits.emergencyMin : dateLimits.standardMin
-    if (formData.end_date) {
+    if (!formData.title.trim()) {
+      newErrors.title = '업무 제목을 입력해주세요.';
+    }
+    if (formData.assigned_to_ids.length === 0) {
+      newErrors.assigned_to_ids = '내부 인력을 최소 1명 이상 배치해주세요.';
+    }
+    if (!formData.end_date) {
+      newErrors.end_date = '종료 일자를 선택해주세요.';
+    } else {
+      const minDate = formData.is_emergency ? dateLimits.emergencyMin : dateLimits.standardMin
       const d = startOfDay(formData.end_date);
       if (d < minDate) {
-        toast.error(`${formData.is_emergency ? '긴급' : '일반'} 접수는 ${format(minDate, 'yyyy-MM-dd')} 이후부터 선택 가능합니다.`)
-        return
+        newErrors.end_date = `${formData.is_emergency ? '긴급' : '일반'} 접수는 ${format(minDate, 'yyyy-MM-dd')} 이후부터 가능합니다.`;
+      } else if (!isBusinessDay(d)) {
+        newErrors.end_date = '주말이나 공휴일은 선택할 수 없습니다.';
       }
-      if (!isBusinessDay(d)) {
-        toast.error('종료 일자는 주말이나 공휴일일 수 없습니다. 평일을 선택해 주세요.')
-        return
-      }
+    }
+
+    if (formData.is_emergency && !formData.emergency_reason.trim()) {
+      newErrors.emergency_reason = '긴급 처리 사유를 입력해주세요.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('입력 항목을 확인해주세요.');
+      return;
     }
 
     const submissionData = {
@@ -191,6 +219,7 @@ export default function TicketsPage() {
           description: '', assigned_to_ids: [], end_date: undefined, is_emergency: false,
           emergency_reason: '', files: []
         })
+        setErrors({});
       }
     })
   }
@@ -229,14 +258,22 @@ export default function TicketsPage() {
                     <div className="grid grid-cols-2 gap-6">
                       <div className="grid gap-2 col-span-2">
                         <Label className="text-sm font-black text-zinc-700 ml-1">프로젝트</Label>
-                        <Select onValueChange={(v) => setFormData(prev => ({...prev, project_id: v}))} required>
-                          <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
+                        <Select 
+                          onValueChange={(v) => handleInputChange('project_id', v)} 
+                          value={formData.project_id}
+                          required
+                        >
+                          <SelectTrigger className={cn(
+                            "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
+                            errors.project_id && "border-red-500 bg-red-50/30"
+                          )}>
                             <SelectValue placeholder="프로젝트를 선택하세요" />
                           </SelectTrigger>
                           <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
                             {myProjects?.map(p => <SelectItem key={p.id} value={p.id} className="font-bold py-3">{p.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
+                        {errors.project_id && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
                       </div>
                       
                       <div className="grid gap-2 col-span-2">
@@ -250,10 +287,18 @@ export default function TicketsPage() {
                               is_emergency: isUrgent, 
                               end_date: isUrgent ? prev.end_date : undefined
                             }))
+                            if (errors.category) setErrors(prev => {
+                              const next = {...prev};
+                              delete next.category;
+                              return next;
+                            });
                           }} 
                           value={formData.category}
                         >
-                          <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-bold text-left">
+                          <SelectTrigger className={cn(
+                            "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-bold text-left",
+                            errors.category && "border-red-500 bg-red-50/30"
+                          )}>
                             <SelectValue placeholder="카테고리를 선택하세요" />
                           </SelectTrigger>
                           <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
@@ -264,6 +309,7 @@ export default function TicketsPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {errors.category && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.category}</p>}
                       </div>
 
                       <div className="grid gap-2 col-span-2">
@@ -291,20 +337,24 @@ export default function TicketsPage() {
                         <Label className="text-sm font-black text-zinc-700 ml-1">제목</Label>
                         <Input 
                           placeholder="업무 제목을 입력하세요" 
-                          className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                          className={cn(
+                            "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
+                            errors.title && "border-red-500 bg-red-50/30"
+                          )}
                           value={formData.title}
-                          onChange={e => setFormData(prev => ({...prev, title: e.target.value}))}
+                          onChange={e => handleInputChange('title', e.target.value)}
                           required
                         />
+                        {errors.title && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.title}</p>}
                       </div>
 
                       <div className="grid gap-2 col-span-2">
                         <Label className="text-sm font-black text-zinc-700 ml-1">설명</Label>
                         <Textarea
-                          placeholder="상세 내용을 입력하세요"
+                          placeholder="상세 내용을 입력하세요 (선택 사항)"
                           className="min-h-[140px] rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 py-4 font-medium"
                           value={formData.description}
-                          onChange={e => setFormData(prev => ({...prev, description: e.target.value}))}
+                          onChange={e => handleInputChange('description', e.target.value)}
                         />
                       </div>
 
@@ -313,12 +363,22 @@ export default function TicketsPage() {
                           내부 인력 배치
                           <span className="text-[10px] text-zinc-400 font-bold uppercase italic">{formData.assigned_to_ids.length}명 선택됨</span>
                         </Label>
-                        <div className="bg-zinc-50 rounded-[1.5rem] p-4 border border-zinc-100 min-h-[120px]">
+                        <div className={cn(
+                          "bg-zinc-50 rounded-[1.5rem] p-4 border transition-all min-h-[120px]",
+                          errors.assigned_to_ids ? "border-red-500 bg-red-50/30" : "border-zinc-100"
+                        )}>
                           <div className="grid grid-cols-2 gap-3">
                             {projectStaffs?.map((staff: any) => (
                               <div
                                 key={staff.id}
-                                onClick={() => toggleStaff(staff.id)}
+                                onClick={() => {
+                                  toggleStaff(staff.id);
+                                  if (errors.assigned_to_ids) setErrors(prev => {
+                                    const next = {...prev};
+                                    delete next.assigned_to_ids;
+                                    return next;
+                                  });
+                                }}
                                 className={cn(
                                   "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group",
                                   formData.assigned_to_ids.includes(staff.id)
@@ -346,6 +406,7 @@ export default function TicketsPage() {
                             )}
                           </div>
                         </div>
+                        {errors.assigned_to_ids && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.assigned_to_ids}</p>}
                       </div>
 
                       <div className="grid gap-2 col-span-2">
@@ -362,7 +423,8 @@ export default function TicketsPage() {
                               className={cn(
                                 "h-14 w-full rounded-2xl border-zinc-200 px-5 font-medium justify-start text-left",
                                 !formData.end_date && "text-muted-foreground",
-                                formData.is_emergency && "border-red-200 bg-red-50/10"
+                                formData.is_emergency && "border-red-200 bg-red-50/10",
+                                errors.end_date && "border-red-500 bg-red-50/30 text-red-500"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -374,7 +436,7 @@ export default function TicketsPage() {
                               mode="single"
                               selected={formData.end_date}
                               onSelect={(date) => {
-                                setFormData(prev => ({...prev, end_date: date}));
+                                handleInputChange('end_date', date);
                                 setIsCalendarOpen(false); // 1. 날짜 선택 시 달력 닫기
                               }}
                               initialFocus
@@ -400,6 +462,7 @@ export default function TicketsPage() {
                             />
                           </PopoverContent>
                         </Popover>
+                        {errors.end_date && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.end_date}</p>}
                       </div>
 
                       <div className={cn(
@@ -439,20 +502,24 @@ export default function TicketsPage() {
                           {formData.is_emergency && <Badge variant="destructive" className="animate-pulse bg-red-600 border-none font-black px-3">URGENT</Badge>}
                         </div>
 
-                        {formData.is_emergency && (
-                          <div className="grid gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="grid gap-2">
-                              <Label className="text-xs font-black text-red-600 ml-1">긴급처리 사유</Label>
-                              <Textarea 
-                                placeholder="긴급 처리가 필요한 구체적인 사유를 입력하세요."
-                                className="min-h-[80px] rounded-xl border-red-100 focus:ring-red-600 font-medium bg-white"
-                                value={formData.emergency_reason}
-                                onChange={e => setFormData(prev => ({...prev, emergency_reason: e.target.value}))}
-                                required
-                              />
-                            </div>
-                          </div>
-                        )}
+                         {formData.is_emergency && (
+                           <div className="grid gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                             <div className="grid gap-2">
+                               <Label className="text-xs font-black text-red-600 ml-1">긴급처리 사유</Label>
+                               <Textarea 
+                                 placeholder="긴급 처리가 필요한 구체적인 사유를 입력하세요."
+                                 className={cn(
+                                   "min-h-[80px] rounded-xl border-red-100 focus:ring-red-600 font-medium bg-white",
+                                   errors.emergency_reason && "border-red-500 ring-1 ring-red-500"
+                                 )}
+                                 value={formData.emergency_reason}
+                                 onChange={e => handleInputChange('emergency_reason', e.target.value)}
+                                 required
+                               />
+                               {errors.emergency_reason && <p className="text-[11px] font-bold text-red-500 ml-2 italic">! {errors.emergency_reason}</p>}
+                             </div>
+                           </div>
+                         )}
                       </div>
 
                       <div className="grid gap-2 col-span-2">
@@ -515,71 +582,96 @@ export default function TicketsPage() {
         </Dialog>
       </PageHeader>
 
-      <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white">
-        <Table>
-          <TableHeader className="bg-zinc-50/50">
-            <TableRow className="hover:bg-transparent border-zinc-50">
-              <TableHead className="w-[120px] font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest">아이디</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">프로젝트 / 제목</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">고객</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">상태</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">마감기한</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tickets && tickets.length > 0 ? (
-              tickets.map((ticket: any) => (
-                <TableRow 
-                  key={ticket.id}
-                  className={cn(
-                    "group transition-all border-zinc-50",
-                    ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
-                  )}
-                >
-                  <TableCell className="font-mono text-[10px] text-zinc-400 pl-10 font-bold">{ticket.id.slice(0, 8)}</TableCell>
-                  <TableCell className="py-5">
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tight leading-none">{ticket.project?.name || '---'}</span>
-                      <div className="flex items-center gap-2">
-                        {ticket.is_urgent && <Zap className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />}
-                        <span className={cn("font-black text-zinc-900 tracking-tight", ticket.is_urgent && "text-red-600")}>{ticket.title}</span>
-                        <Badge variant="outline" className="text-[9px] font-black h-4 px-1.5 rounded-md border-zinc-100 bg-white shadow-sm">
-                          {ticket.category === CAT_EMERGENCY ? "🚨 " : 
-                           ticket.category === CAT_ERROR ? "🛠️ " :
-                           ticket.category === CAT_REPAIR ? "🎨 " :
-                           ticket.category === CAT_REQUEST ? "📂 " :
-                           ticket.category === CAT_ADD ? "➕ " : ""}
-                          {ticket.category.includes('/') ? ticket.category.split('/')[1].trim() : ticket.category}
-                        </Badge>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-black text-zinc-500 text-sm">{ticket.customer?.full_name || '---'}</TableCell>
-                  <TableCell>
-                    <Badge className={cn(
-                      "font-black px-4 py-1 rounded-full text-[10px] shadow-sm",
-                      ticket.status === 'WAITING' ? "bg-amber-100 text-amber-600 hover:bg-amber-100 border-none" :
-                      ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600 hover:bg-blue-100 border-none" :
-                      "bg-zinc-100 text-zinc-500 hover:bg-zinc-100 border-none"
-                    )}>
-                      {ticket.status === 'WAITING' ? '대기' : ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? '진행' : '완료'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 font-black text-zinc-400 text-xs">
-                      <Clock className="h-4 w-4 opacity-50" />
-                      {new Date(ticket.deadline).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell className="pr-10">
-                    <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
-                      <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
+       <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white">
+         <Table>
+           <TableHeader className="bg-zinc-50/50">
+             <TableRow className="hover:bg-transparent border-zinc-50">
+               <TableHead className="w-[100px] font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest text-center">상태</TableHead>
+               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">프로젝트</TableHead>
+               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">제목</TableHead>
+               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">종료일자</TableHead>
+               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">잔여일자(D-)</TableHead>
+               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">등록일</TableHead>
+               <TableHead className="w-[80px]"></TableHead>
+             </TableRow>
+           </TableHeader>
+           <TableBody>
+             {tickets && tickets.length > 0 ? (
+               tickets.map((ticket: any) => {
+                 const targetDate = ticket.end_date || ticket.deadline;
+                 const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
+                 
+                 return (
+                   <TableRow 
+                     key={ticket.id}
+                     className={cn(
+                       "group transition-all border-zinc-50",
+                       ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
+                     )}
+                   >
+                     <TableCell className="pl-10 text-center">
+                       <Badge className={cn(
+                         "font-black px-4 py-1 rounded-full text-[10px] shadow-sm",
+                         ticket.status === 'WAITING' ? "bg-amber-100 text-amber-600 hover:bg-amber-100 border-none" :
+                         ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600 hover:bg-blue-100 border-none" :
+                         "bg-zinc-100 text-zinc-500 hover:bg-zinc-100 border-none"
+                       )}>
+                         {ticket.status === 'WAITING' ? '대기' : ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? '진행' : '완료'}
+                       </Badge>
+                     </TableCell>
+                     <TableCell className="py-5">
+                       <span className="text-xs font-black text-zinc-400 uppercase tracking-tight leading-none">{ticket.project?.name || '---'}</span>
+                     </TableCell>
+                     <TableCell>
+                       <div className="flex items-center gap-2">
+                         {ticket.is_urgent && <Zap className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />}
+                         <span className={cn("font-black text-zinc-900 tracking-tight", ticket.is_urgent && "text-red-600")}>{ticket.title}</span>
+                         <Badge variant="outline" className="text-[9px] font-black h-4 px-1.5 rounded-md border-zinc-100 bg-white shadow-sm">
+                           {ticket.category === CAT_EMERGENCY ? "🚨 " : 
+                            ticket.category === CAT_ERROR ? "🛠️ " :
+                            ticket.category === CAT_REPAIR ? "🎨 " :
+                            ticket.category === CAT_REQUEST ? "📂 " :
+                            ticket.category === CAT_ADD ? "➕ " : ""}
+                           {ticket.category.includes('/') ? ticket.category.split('/')[1].trim() : ticket.category}
+                         </Badge>
+                       </div>
+                     </TableCell>
+                     <TableCell>
+                       <div className="flex items-center gap-2 font-black text-zinc-600 text-xs text-center">
+                         {targetDate ? format(new Date(targetDate), "yyyy-MM-dd") : '---'}
+                       </div>
+                     </TableCell>
+                     <TableCell>
+                       {ticket.status === 'COMPLETED' ? (
+                         <span className="text-zinc-300 font-black text-xs">-</span>
+                       ) : dDay !== null ? (
+                         <span className={cn(
+                           "font-black text-xs",
+                           dDay < 0 ? "text-red-600" : 
+                           dDay === 0 ? "text-red-600" :
+                           "text-blue-600"
+                         )}>
+                           {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
+                         </span>
+                       ) : (
+                         <span className="text-zinc-300 text-xs">---</span>
+                       )}
+                     </TableCell>
+                     <TableCell>
+                       <div className="flex items-center gap-2 font-black text-zinc-400 text-xs">
+                         <Clock className="h-4 w-4 opacity-50" />
+                         {format(new Date(ticket.created_at), "yyyy-MM-dd")}
+                       </div>
+                     </TableCell>
+                     <TableCell className="pr-10 text-right">
+                       <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
+                         <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
+                       </Button>
+                     </TableCell>
+                   </TableRow>
+                 )
+               })
+             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-56 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
