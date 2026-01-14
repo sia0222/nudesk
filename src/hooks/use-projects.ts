@@ -55,11 +55,11 @@ export function useCreateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ name, description, memberIds }: { name: string, description: string, memberIds: string[] }) => {
+    mutationFn: async ({ name, description, project_type, start_date, end_date, memberIds }: { name: string, description: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[] }) => {
       // 1. 프로젝트 생성
       const { data: project, error: projectError } = await supabase
         .from('projects')
-        .insert([{ name, description }])
+        .insert([{ name, description, project_type, start_date: start_date || null, end_date: end_date || null }])
         .select()
         .single()
 
@@ -96,11 +96,11 @@ export function useUpdateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, name, description, memberIds }: { id: string, name: string, description: string, memberIds: string[] }) => {
+    mutationFn: async ({ id, name, description, project_type, start_date, end_date, memberIds }: { id: string, name: string, description: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[] }) => {
       // 1. 프로젝트 기본 정보 업데이트
       const { error: projectError } = await supabase
         .from('projects')
-        .update({ name, description })
+        .update({ name, description, project_type, start_date: start_date || null, end_date: end_date || null })
         .eq('id', id)
 
       if (projectError) throw projectError

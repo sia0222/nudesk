@@ -5,6 +5,7 @@ import { useProjects, useCreateProject, useUpdateProject, useProjectMembers } fr
 import { useProjectUsers } from '@/hooks/use-admin'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Plus, 
   FolderKanban, 
@@ -32,6 +33,8 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { createClient } from '@/utils/supabase/client'
+import { PageContainer } from "@/components/layout/page-container"
+import { PageHeader } from "@/components/layout/page-header"
 
 // --- 프로젝트 수정 다이얼로그 컴포넌트 ---
 function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[] }) {
@@ -39,6 +42,9 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
   const [formData, setFormData] = useState({
     name: project.name,
     description: project.description || '',
+    project_type: project.project_type || '개발',
+    start_date: project.start_date || '',
+    end_date: project.end_date || '',
     memberIds: [] as string[]
   })
 
@@ -84,6 +90,9 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
     }))
   }
 
+  const internalUsers = allUsers?.filter(u => u.role === 'ADMIN' || u.role === 'STAFF') || []
+  const customerUsers = allUsers?.filter(u => u.role === 'CUSTOMER') || []
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -92,16 +101,29 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
           <Edit2 className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] rounded-[2rem] p-8 gap-8 border-none shadow-2xl">
+      <DialogContent className="sm:max-w-[600px] rounded-[2.5rem] p-10 gap-8 border-none shadow-2xl">
         <form onSubmit={handleUpdate} className="space-y-8">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black tracking-tighter">프로젝트 정보 수정</DialogTitle>
-            <DialogDescription className="text-zinc-500 font-medium">
+            <DialogDescription className="font-bold text-zinc-400">
               프로젝트 정보를 변경하고 인력을 다시 배치할 수 있습니다.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-6">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-project_type" className="text-sm font-black text-zinc-700 ml-1">프로젝트 종류</Label>
+              <Select value={formData.project_type} onValueChange={(value: '개발' | '유지') => setFormData({...formData, project_type: value})}>
+                <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
+                  <SelectValue placeholder="프로젝트 종류를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
+                  <SelectItem value="개발" className="font-bold py-3">개발</SelectItem>
+                  <SelectItem value="유지" className="font-bold py-3">유지</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="edit-name" className="text-sm font-black text-zinc-700 ml-1">프로젝트명</Label>
               <Input
@@ -113,6 +135,7 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
                 required
               />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="edit-description" className="text-sm font-black text-zinc-700 ml-1">상세 설명</Label>
               <Textarea
@@ -124,17 +147,84 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-start_date" className="text-sm font-black text-zinc-700 ml-1">시작일</Label>
+                <Input
+                  id="edit-start_date"
+                  type="date"
+                  className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-end_date" className="text-sm font-black text-zinc-700 ml-1">종료일</Label>
+                <Input
+                  id="edit-end_date"
+                  type="date"
+                  className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                />
+              </div>
+            </div>
+
             <div className="grid gap-3">
               <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
-                인력 재배치 
-                <span className="text-xs text-zinc-400 font-bold uppercase tracking-widest">
-                  {formData.memberIds.length} Selected
+                내부 인력 재배치
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                  {formData.memberIds.filter(id => internalUsers.some(u => u.id === id)).length}명 선택됨
                 </span>
               </Label>
               <div className="bg-zinc-50 rounded-[1.5rem] p-2 border border-zinc-100">
-                <ScrollArea className="h-[180px] px-2">
+                <ScrollArea className="h-[140px] px-2">
                   <div className="grid grid-cols-2 gap-2 py-2">
-                    {allUsers?.map((user) => (
+                    {internalUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        onClick={() => toggleMember(user.id)}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer",
+                          formData.memberIds.includes(user.id)
+                            ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
+                            : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
+                        )}
+                      >
+                        <div className={cn(
+                          "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
+                          formData.memberIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
+                        )}>
+                          {user.role[0]}
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="text-xs font-black truncate">{user.full_name}</p>
+                          <p className={cn(
+                            "text-[10px] font-bold truncate opacity-60 uppercase",
+                            formData.memberIds.includes(user.id) ? "text-white" : "text-zinc-400"
+                          )}>
+                            {user.role}
+                          </p>
+                        </div>
+                        {formData.memberIds.includes(user.id) && <Check className="h-4 w-4" />}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
+                고객 인력 재배치
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                  {formData.memberIds.filter(id => customerUsers.some(u => u.id === id)).length}명 선택됨
+                </span>
+              </Label>
+              <div className="bg-zinc-50 rounded-[1.5rem] p-2 border border-zinc-100">
+                <ScrollArea className="h-[120px] px-2">
+                  <div className="grid grid-cols-2 gap-2 py-2">
+                    {customerUsers.map((user) => (
                       <div
                         key={user.id}
                         onClick={() => toggleMember(user.id)}
@@ -188,12 +278,19 @@ function EditProjectDialog({ project, allUsers }: { project: any, allUsers: any[
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects()
   const { data: allUsers } = useProjectUsers()
+  
+  const internalUsers = allUsers?.filter(u => u.role === 'ADMIN' || u.role === 'STAFF') || []
+  const customerUsers = allUsers?.filter(u => u.role === 'CUSTOMER') || []
+
   const createProjectMutation = useCreateProject()
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    project_type: '개발' as '개발' | '유지',
+    start_date: '',
+    end_date: '',
     memberIds: [] as string[]
   })
 
@@ -204,7 +301,7 @@ export default function ProjectsPage() {
     createProjectMutation.mutate(formData, {
       onSuccess: () => {
         setIsCreateOpen(false)
-        setFormData({ name: '', description: '', memberIds: [] })
+        setFormData({ name: '', description: '', project_type: '개발', start_date: '', end_date: '', memberIds: [] })
       }
     })
   }
@@ -227,19 +324,12 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-8 py-6">
-      {/* 상단 헤더 섹션 */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-3xl border shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="h-16 w-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shadow-xl shadow-zinc-200">
-            <Briefcase className="h-8 w-8" />
-          </div>
-          <div>
-            <h1 className="text-4xl font-black tracking-tighter text-zinc-900">프로젝트 관리</h1>
-            <p className="text-zinc-500 font-medium mt-1">실무 그룹을 생성하고 프로젝트별 인력을 배치합니다.</p>
-          </div>
-        </div>
-
+    <PageContainer>
+      <PageHeader 
+        icon={Briefcase} 
+        title="프로젝트 관리" 
+        description="실무 그룹을 생성하고 프로젝트별 인력을 배치합니다."
+      >
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
@@ -247,16 +337,29 @@ export default function ProjectsPage() {
               새 프로젝트 생성
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] rounded-[2rem] p-8 gap-8 border-none shadow-2xl">
+          <DialogContent className="sm:max-w-[600px] rounded-[2.5rem] p-10 gap-8 border-none shadow-2xl">
             <form onSubmit={handleCreateProject} className="space-y-8">
               <DialogHeader>
                 <DialogTitle className="text-3xl font-black tracking-tighter">새 프로젝트 생성</DialogTitle>
-                <DialogDescription className="text-zinc-500 font-medium">
+                <DialogDescription className="font-bold text-zinc-400">
                   프로젝트의 기본 정보를 입력하고 함께 할 인력을 배치하세요.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-6">
+                <div className="grid gap-2">
+                  <Label htmlFor="project_type" className="text-sm font-black text-zinc-700 ml-1">프로젝트 종류</Label>
+                  <Select value={formData.project_type} onValueChange={(value: '개발' | '유지') => setFormData({...formData, project_type: value})}>
+                    <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
+                      <SelectValue placeholder="프로젝트 종류를 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
+                      <SelectItem value="개발" className="font-bold py-3">개발</SelectItem>
+                      <SelectItem value="유지" className="font-bold py-3">유지</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="grid gap-2">
                   <Label htmlFor="name" className="text-sm font-black text-zinc-700 ml-1">프로젝트명</Label>
                   <Input
@@ -279,17 +382,84 @@ export default function ProjectsPage() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="start_date" className="text-sm font-black text-zinc-700 ml-1">시작일</Label>
+                    <Input
+                      id="start_date"
+                      type="date"
+                      className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="end_date" className="text-sm font-black text-zinc-700 ml-1">종료일</Label>
+                    <Input
+                      id="end_date"
+                      type="date"
+                      className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                    />
+                  </div>
+                </div>
+
                 <div className="grid gap-3">
                   <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
-                    인력 배치 
-                    <span className="text-xs text-zinc-400 font-bold uppercase tracking-widest">
-                      {formData.memberIds.length} Selected
+                    내부 인력 배치
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                      {formData.memberIds.filter(id => internalUsers.some(u => u.id === id)).length}명 선택됨
                     </span>
                   </Label>
                   <div className="bg-zinc-50 rounded-[1.5rem] p-2 border border-zinc-100">
-                    <ScrollArea className="h-[180px] px-2">
+                    <ScrollArea className="h-[140px] px-2">
                       <div className="grid grid-cols-2 gap-2 py-2">
-                        {allUsers?.map((user) => (
+                        {internalUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            onClick={() => toggleMember(user.id)}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer",
+                              formData.memberIds.includes(user.id)
+                                ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
+                                : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
+                            )}
+                          >
+                            <div className={cn(
+                              "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
+                              formData.memberIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
+                            )}>
+                              {user.role[0]}
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                              <p className="text-xs font-black truncate">{user.full_name}</p>
+                              <p className={cn(
+                                "text-[10px] font-bold truncate opacity-60 uppercase",
+                                formData.memberIds.includes(user.id) ? "text-white" : "text-zinc-400"
+                              )}>
+                                {user.role}
+                              </p>
+                            </div>
+                            {formData.memberIds.includes(user.id) && <Check className="h-4 w-4" />}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </div>
+
+                <div className="grid gap-3">
+                  <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
+                    고객 인력 배치
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                      {formData.memberIds.filter(id => customerUsers.some(u => u.id === id)).length}명 선택됨
+                    </span>
+                  </Label>
+                  <div className="bg-zinc-50 rounded-[1.5rem] p-2 border border-zinc-100">
+                    <ScrollArea className="h-[120px] px-2">
+                      <div className="grid grid-cols-2 gap-2 py-2">
+                        {customerUsers.map((user) => (
                           <div
                             key={user.id}
                             onClick={() => toggleMember(user.id)}
@@ -336,7 +506,7 @@ export default function ProjectsPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </PageHeader>
 
       {/* 프로젝트 리스트 */}
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -357,7 +527,7 @@ export default function ProjectsPage() {
                         <FolderKanban className="h-6 w-6" />
                       </div>
                       <Badge variant="outline" className="rounded-full px-4 py-1 font-bold border-zinc-100 text-zinc-400 group-hover:bg-zinc-50 transition-colors">
-                        Active
+                        활성
                       </Badge>
                     </div>
                     <CardTitle className="text-2xl font-black tracking-tighter text-zinc-900 group-hover:text-primary transition-colors">
@@ -422,6 +592,6 @@ export default function ProjectsPage() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </PageContainer>
   )
 }

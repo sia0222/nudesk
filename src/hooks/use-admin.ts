@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/utils/supabase/client'
 import { toast } from 'sonner'
-import { registerUserAction } from '@/app/admin/users/actions'
+import { registerUserAction, updateUserAction, resetPasswordAction } from '@/app/admin/users/actions'
 
 export const adminKeys = {
   all: ['admin'] as const,
@@ -75,6 +75,33 @@ export function useCreateUser() {
     },
     onError: (error: any) => {
       toast.error(`등록 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, formData }: { id: string, formData: any }) => updateUserAction(id, formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.allUsers() })
+      toast.success('사용자 정보가 수정되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`수정 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (id: string) => resetPasswordAction(id),
+    onSuccess: () => {
+      toast.success('비밀번호가 0000으로 초기화되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`초기화 실패: ${error.message}`)
     }
   })
 }

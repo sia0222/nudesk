@@ -22,6 +22,8 @@ import { toast } from "sonner"
 import { useTickets, useCreateTicket } from "@/hooks/use-tickets"
 import { useQuery } from "@tanstack/react-query"
 import { getCurrentSession } from "@/lib/authHelpers"
+import { PageContainer } from "@/components/layout/page-container"
+import { PageHeader } from "@/components/layout/page-header"
 
 export default function TicketsPage() {
   const supabase = createClient()
@@ -112,28 +114,18 @@ export default function TicketsPage() {
   )
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-8 py-6 font-sans">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-[2.5rem] border shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="h-16 w-16 rounded-3xl bg-blue-600 text-white flex items-center justify-center shadow-xl shadow-blue-100">
-            <ClipboardList className="h-8 w-8" />
-          </div>
-          <div>
-            <h1 className="text-4xl font-black tracking-tighter text-zinc-900 italic">접수 리스트</h1>
-            <p className="text-zinc-500 font-medium mt-1">
-              {profile?.role === 'MASTER' || profile?.role === 'ADMIN' 
-                ? '전체 프로젝트의 요청을 실시간으로 관리합니다.' 
-                : '소속 프로젝트의 요청 사항을 확인하고 관리합니다.'}
-            </p>
-          </div>
-        </div>
-
+    <PageContainer>
+      <PageHeader 
+        icon={ClipboardList} 
+        title="접수 리스트" 
+        description={profile?.role === 'MASTER' || profile?.role === 'ADMIN' 
+          ? '전체 프로젝트의 요청을 실시간으로 관리합니다.' 
+          : '소속 프로젝트의 요청 사항을 확인하고 관리합니다.'}
+        iconClassName="bg-blue-600 shadow-blue-100"
+      >
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className={cn(
-              "h-14 px-8 rounded-2xl font-black gap-2 shadow-xl transition-all active:scale-95",
-              profile?.role === 'CUSTOMER' ? "bg-blue-600 hover:bg-blue-700 shadow-blue-100" : "bg-zinc-900 hover:bg-zinc-800 shadow-zinc-100 text-white"
-            )}>
+            <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
               {profile?.role === 'CUSTOMER' ? <ClipboardList className="h-5 w-5" /> : <PlusCircle className="h-5 w-5" />}
               {profile?.role === 'CUSTOMER' ? '업무 접수하기' : '새 티켓 등록'}
             </Button>
@@ -141,7 +133,7 @@ export default function TicketsPage() {
           <DialogContent className="sm:max-w-[550px] rounded-[2.5rem] p-10 border-none shadow-2xl">
             <form onSubmit={handleCreateTicket} className="space-y-8">
               <DialogHeader>
-                <DialogTitle className="text-3xl font-black tracking-tighter italic">
+                <DialogTitle className="text-3xl font-black tracking-tighter">
                   {profile?.role === 'CUSTOMER' ? '업무 접수' : '새 티켓 등록'}
                 </DialogTitle>
                 <DialogDescription className="font-bold text-zinc-400">
@@ -151,9 +143,9 @@ export default function TicketsPage() {
 
               <div className="grid gap-6">
                 <div className="grid gap-2">
-                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Project</Label>
+                  <Label className="text-sm font-black text-zinc-700 ml-1">프로젝트</Label>
                   <Select onValueChange={(v) => setFormData({...formData, project_id: v})} required>
-                    <SelectTrigger className="h-14 rounded-2xl border-zinc-100 bg-zinc-50/50 font-bold px-5">
+                    <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
                       <SelectValue placeholder="프로젝트를 선택하세요" />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
@@ -164,9 +156,9 @@ export default function TicketsPage() {
                 </div>
                 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Category</Label>
+                  <Label className="text-sm font-black text-zinc-700 ml-1">카테고리</Label>
                   <Select onValueChange={(v: any) => setFormData({...formData, category: v})} defaultValue="기타">
-                    <SelectTrigger className="h-14 rounded-2xl border-zinc-100 bg-zinc-50/50 font-bold px-5">
+                    <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
@@ -178,10 +170,10 @@ export default function TicketsPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Title</Label>
+                  <Label className="text-sm font-black text-zinc-700 ml-1">제목</Label>
                   <Input 
                     placeholder="업무 제목을 입력하세요" 
-                    className="h-14 rounded-2xl border-zinc-100 bg-zinc-50/50 font-bold px-5"
+                    className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
                     value={formData.title}
                     onChange={e => setFormData({...formData, title: e.target.value})}
                     required
@@ -189,19 +181,19 @@ export default function TicketsPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Description</Label>
+                  <Label className="text-sm font-black text-zinc-700 ml-1">설명</Label>
                   <Textarea
                     placeholder="상세 내용을 입력하세요"
-                    className="min-h-[140px] rounded-2xl border-zinc-100 bg-zinc-50/50 font-bold px-5 py-4"
+                    className="min-h-[140px] rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 py-4 font-medium"
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
                   />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Priority</Label>
+                  <Label className="text-sm font-black text-zinc-700 ml-1">우선순위</Label>
                   <Select onValueChange={(v: any) => setFormData({...formData, priority: v})} defaultValue="보통">
-                    <SelectTrigger className="h-14 rounded-2xl border-zinc-100 bg-zinc-50/50 font-bold px-5">
+                    <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
@@ -214,24 +206,28 @@ export default function TicketsPage() {
               </div>
 
               <DialogFooter>
-                <Button type="submit" className="w-full h-16 rounded-[1.5rem] bg-zinc-900 hover:bg-zinc-800 text-white font-black text-lg shadow-xl shadow-zinc-200" disabled={createTicketMutation.isPending}>
+                <Button 
+                  type="submit" 
+                  className="w-full h-16 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-lg shadow-xl shadow-zinc-200 transition-all active:scale-95"
+                  disabled={createTicketMutation.isPending}
+                >
                   {createTicketMutation.isPending ? <Loader2 className="animate-spin h-6 w-6" /> : '접수 완료하기'}
                 </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </PageHeader>
 
       <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white">
         <Table>
           <TableHeader className="bg-zinc-50/50">
             <TableRow className="hover:bg-transparent border-zinc-50">
-              <TableHead className="w-[120px] font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest">Id</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">Project / Title</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">Customer</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">Status</TableHead>
-              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">Deadline</TableHead>
+              <TableHead className="w-[120px] font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest">아이디</TableHead>
+              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">프로젝트 / 제목</TableHead>
+              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">고객</TableHead>
+              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">상태</TableHead>
+              <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">마감기한</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -295,6 +291,6 @@ export default function TicketsPage() {
           </TableBody>
         </Table>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

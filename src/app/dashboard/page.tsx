@@ -20,6 +20,8 @@ import Link from "next/link"
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { cn } from "@/lib/utils"
+import { PageContainer } from "@/components/layout/page-container"
+import { PageHeader } from "@/components/layout/page-header"
 
 export default function DashboardPage() {
   // 실시간 티켓 데이터 조회
@@ -73,12 +75,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-10 py-6 font-sans">
-      {/* Header Area */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-black tracking-tighter text-zinc-900 italic">Dashboard</h1>
-        <p className="text-zinc-500 font-bold">실시간 업무 현황 및 주요 지표를 확인합니다.</p>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        icon={Zap} 
+        title="대시보드" 
+        description="실시간 업무 현황 및 주요 지표를 확인합니다."
+        iconClassName="bg-blue-600 shadow-blue-100"
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -112,12 +115,12 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2 border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] bg-white rounded-[2.5rem] overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between p-10 pb-4">
             <div>
-              <CardTitle className="text-2xl font-black tracking-tighter italic">Recent Activity</CardTitle>
+              <CardTitle className="text-2xl font-black tracking-tighter italic">최근 활동</CardTitle>
               <CardDescription className="font-bold text-zinc-400 mt-1">실시간으로 업데이트되는 최근 티켓 목록입니다.</CardDescription>
             </div>
             <Link href="/dashboard/tickets">
               <Button variant="ghost" className="text-xs font-black text-zinc-400 hover:text-zinc-900 gap-1 rounded-xl uppercase tracking-wider">
-                View All <ChevronRight className="h-4 w-4" />
+                전체 보기 <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
           </CardHeader>
@@ -144,12 +147,12 @@ export default function DashboardPage() {
                           <p className="font-black text-zinc-900 tracking-tight text-lg">{ticket.title}</p>
                           {ticket.is_urgent && (
                             <Badge variant="destructive" className="h-5 px-2 rounded-full text-[9px] font-black animate-pulse bg-red-600 border-none">
-                              URGENT
+                              긴급
                             </Badge>
                           )}
                         </div>
                         <p className="text-[10px] font-black text-zinc-400 mt-1 uppercase tracking-widest flex items-center gap-2">
-                          <span className="text-zinc-900">{ticket.project?.name || 'No Project'}</span>
+                          <span className="text-zinc-900">{ticket.project?.name || '프로젝트 없음'}</span>
                           <span className="opacity-30">|</span>
                           <span>{ticket.id.slice(0, 8)}</span>
                         </p>
@@ -187,12 +190,12 @@ export default function DashboardPage() {
           <Card className="border-none shadow-[0_30px_60px_rgba(0,0,0,0.12)] bg-zinc-900 text-white rounded-[2.5rem] overflow-hidden relative group p-2">
             <CardHeader className="p-8 pb-4">
               <CardTitle className="flex items-center gap-3 text-2xl font-black tracking-tighter italic">
-                <Calendar className="h-7 w-7 text-zinc-500" /> Schedule
+                <Calendar className="h-7 w-7 text-zinc-500" /> 일정
               </CardTitle>
             </CardHeader>
             <CardContent className="p-8 pt-4 space-y-8 relative z-10">
               <div className="bg-white/5 rounded-3xl p-6 backdrop-blur-xl border border-white/10 shadow-inner">
-                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Jan 13, 2026</p>
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">2026년 1월 13일</p>
                 <p className="font-black text-xl mt-3 tracking-tight leading-tight">주간 실무 프로젝트 정기 검토 및 인력 배치 회의</p>
                 <p className="text-xs font-bold text-zinc-400 mt-2 flex items-center gap-2 italic">
                   <Clock className="h-3.5 w-3.5" /> 오후 2:00 • 컨퍼런스룸 4C
@@ -209,13 +212,13 @@ export default function DashboardPage() {
 
           <Card className="border-none shadow-[0_10px_40px_rgba(0,0,0,0.03)] bg-white rounded-[2.5rem] overflow-hidden">
             <CardHeader className="p-8 pb-4 border-b border-zinc-50">
-              <CardTitle className="text-xl font-black tracking-tighter italic">System Notice</CardTitle>
+              <CardTitle className="text-xl font-black tracking-tighter italic">공지사항</CardTitle>
             </CardHeader>
             <CardContent className="p-8">
               <div className="space-y-8">
                 {[
-                  { title: 'v1.8 최적화 패치', desc: '데이터 로딩 속도 및 권한 처리 엔진이 개선되었습니다.', date: 'Today' },
-                  { title: '서버 정기 점검', desc: '안정적인 서비스를 위해 금일 자정부터 점검이 있습니다.', date: '1d ago' }
+                  { title: 'v1.8 최적화 패치', desc: '데이터 로딩 속도 및 권한 처리 엔진이 개선되었습니다.', date: '오늘' },
+                  { title: '서버 정기 점검', desc: '안정적인 서비스를 위해 금일 자정부터 점검이 있습니다.', date: '1일 전' }
                 ].map((item, i) => (
                   <div key={i} className="group cursor-pointer relative pl-5 border-l-2 border-zinc-100 hover:border-zinc-900 transition-all">
                     <div className="flex items-center justify-between">
@@ -232,6 +235,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }

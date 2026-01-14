@@ -25,12 +25,14 @@ DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS ticket_status CASCADE;
 DROP TYPE IF EXISTS ticket_category CASCADE;
 DROP TYPE IF EXISTS request_status CASCADE;
+DROP TYPE IF EXISTS project_type CASCADE;
 
 -- 4. 타입 정의
 CREATE TYPE user_role AS ENUM ('MASTER', 'ADMIN', 'STAFF', 'CUSTOMER');
 CREATE TYPE ticket_status AS ENUM ('WAITING', 'ACCEPTED', 'IN_PROGRESS', 'DELAYED', 'COMPLETED');
 CREATE TYPE ticket_category AS ENUM ('수정요청', '자료요청', '기타');
 CREATE TYPE request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+CREATE TYPE project_type AS ENUM ('개발', '유지');
 
 -- 5. 테이블 생성 (Supabase Auth 제거)
 CREATE TABLE public.profiles (
@@ -38,6 +40,8 @@ CREATE TABLE public.profiles (
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL, -- 실제 운영에서는 해시화 필수
     full_name TEXT,
+    email TEXT,           -- 추가: 이메일
+    phone TEXT,           -- 추가: 연락처
     role user_role NOT NULL DEFAULT 'CUSTOMER',
     is_approved BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -47,6 +51,9 @@ CREATE TABLE public.projects (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
+    project_type project_type DEFAULT '개발',
+    start_date DATE,
+    end_date DATE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

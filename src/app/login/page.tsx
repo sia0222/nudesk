@@ -46,24 +46,24 @@ export default function LoginPage() {
           <p className="text-gray-600 font-medium">실무 참여형 스마트 관리 시스템</p>
         </div>
 
-        <Card className="border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:bg-zinc-900/50 backdrop-blur-sm">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">로그인</CardTitle>
-            <CardDescription>
+        <Card className="border-none shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-[2.5rem] overflow-hidden bg-white">
+          <CardHeader className="space-y-3 p-10 pb-5">
+            <CardTitle className="text-3xl font-black tracking-tighter italic">로그인</CardTitle>
+            <CardDescription className="font-bold text-zinc-400">
               시스템 이용을 위해 아이디와 비밀번호를 입력하세요.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
-            <CardContent className="grid gap-5">
+            <CardContent className="grid gap-6 p-10 pt-0">
               <div className="grid gap-2">
-                <Label htmlFor="username">아이디</Label>
+                <Label htmlFor="username" className="text-sm font-black text-zinc-700 ml-1">아이디</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                  <User className="absolute left-5 top-5 h-4 w-4 text-zinc-400" />
                   <Input
                     id="username"
                     type="text"
                     placeholder="아이디를 입력하세요"
-                    className="pl-10"
+                    className="h-14 pl-12 rounded-2xl border-zinc-200 focus:ring-zinc-900 font-medium"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
@@ -71,14 +71,14 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="password">비밀번호</Label>
+                <Label htmlFor="password" className="text-sm font-black text-zinc-700 ml-1">비밀번호</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                  <Lock className="absolute left-5 top-5 h-4 w-4 text-zinc-400" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="h-14 pl-12 rounded-2xl border-zinc-200 focus:ring-zinc-900 font-medium"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -86,11 +86,11 @@ export default function LoginPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="pt-4">
-              <Button className="w-full h-11 text-base font-semibold" type="submit" disabled={isLoading}>
+            <CardFooter className="p-10 pt-0">
+              <Button className="w-full h-16 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-lg shadow-xl shadow-zinc-200 transition-all active:scale-95" type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
                     인증 중...
                   </>
                 ) : (
