@@ -31,8 +31,9 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, ShieldAlert, UserPlus, Search, Edit2, KeyRound } from 'lucide-react'
+import { Loader2, ShieldAlert, UserPlus, Search, Edit2, KeyRound, AlertCircle } from 'lucide-react'
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 
@@ -78,6 +79,24 @@ export default function AdminUsersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 아이디 유효성 검사 (영어 또는 숫자)
+    const usernameRegex = /^[a-zA-Z0-9]+$/;
+    if (!usernameRegex.test(formData.username)) {
+      toast.error('아이디는 영어 또는 숫자로만 입력 가능합니다.');
+      return;
+    }
+
+    // 아이디 중복 검사 (본인 제외)
+    const isDuplicate = users?.some((u: any) => 
+      u.username.toLowerCase() === formData.username.toLowerCase() && 
+      u.id !== editingUser?.id
+    );
+    if (isDuplicate) {
+      toast.error('이미 사용 중인 아이디입니다.');
+      return;
+    }
+
     if (editingUser) {
       updateUserMutation.mutate({ id: editingUser.id, formData }, {
         onSuccess: () => {
@@ -139,12 +158,31 @@ export default function AdminUsersPage() {
                   <Label htmlFor="username" className="text-sm font-black text-zinc-700 ml-1">아이디 (사용자명)</Label>
                   <Input
                     id="username"
-                    placeholder="영어/숫자 조합"
-                    className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                    placeholder="영어 또는 숫자"
+                    className={cn(
+                      "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
+                      formData.username && (
+                        !/^[a-zA-Z0-9]+$/.test(formData.username) || 
+                        users?.some((u: any) => u.username.toLowerCase() === formData.username.toLowerCase() && u.id !== editingUser?.id)
+                      ) && "border-red-500 focus:ring-red-500"
+                    )}
                     value={formData.username}
                     onChange={(e) => setFormData({...formData, username: e.target.value})}
                     required
                   />
+                  {formData.username && !/^[a-zA-Z0-9]+$/.test(formData.username) && (
+                    <p className="text-[10px] text-red-500 font-bold ml-1 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      영어와 숫자만 사용 가능합니다.
+                    </p>
+                  )}
+                  {formData.username && /^[a-zA-Z0-9]+$/.test(formData.username) && 
+                    users?.some((u: any) => u.username.toLowerCase() === formData.username.toLowerCase() && u.id !== editingUser?.id) && (
+                    <p className="text-[10px] text-red-500 font-bold ml-1 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      사용 중인 아이디입니다. 다시 입력해주세요.
+                    </p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="full_name" className="text-sm font-black text-zinc-700 ml-1">이름 (성함)</Label>
