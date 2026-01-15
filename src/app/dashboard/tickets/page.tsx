@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Zap, Loader2, AlertCircle, Plus, Briefcase, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon } from "lucide-react"
+import { Zap, Loader2, AlertCircle, Plus, Briefcase, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useTickets, useCreateTicket } from "@/hooks/use-tickets"
@@ -649,8 +649,7 @@ export default function TicketsPage() {
                        )}
                      </TableCell>
                      <TableCell className="py-6">
-                       <div className="flex items-center gap-2 font-black text-[#9CA3AF] text-sm">
-                         <Clock className="h-4 w-4 opacity-50" />
+                       <div className="font-black text-[#9CA3AF] text-sm">
                          {format(new Date(ticket.created_at), "yyyy-MM-dd")}
                        </div>
                      </TableCell>

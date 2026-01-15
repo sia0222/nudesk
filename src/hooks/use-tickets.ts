@@ -37,24 +37,32 @@ export function useTickets(filters?: any) {
         `)
         .order('created_at', { ascending: false })
 
-      // 권한 및 소속에 따른 필터링
+      // 권한 및 소속에 따른 프로젝트 ID 필터링
+      let projectIds: string[] = []
+
       if (profile?.role === 'CUSTOMER' && profile?.customer_id) {
-        // 고객은 자기 회사 티켓만 조회
-        query = query.eq('customer_id', profile.customer_id)
+        // 고객(CUSTOMER) 권한: 본인 회사(customer_id)에 할당된 프로젝트 ID 조회
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('customer_id', profile.customer_id)
+        
+        if (projects) projectIds = projects.map(p => p.id)
       } else {
-        // 마스터/관리자/직원은 참여 중인 프로젝트의 티켓 조회
+        // MASTER, ADMIN, STAFF 권한: 참여 중인(project_members) 프로젝트 ID 조회
         const { data: memberships } = await supabase
           .from('project_members')
           .select('project_id')
           .eq('user_id', session.userId)
 
-        if (memberships && memberships.length > 0) {
-          const projectIds = memberships.map(m => m.project_id)
-          query = query.in('project_id', projectIds)
-        } else if (profile?.role !== 'MASTER' && profile?.role !== 'ADMIN') {
-          return []
-        }
+        if (memberships) projectIds = memberships.map(m => m.project_id)
       }
+
+      // 소속된 프로젝트가 없으면 빈 목록 반환 (MASTER 포함 모든 권한 공통 적용)
+      if (projectIds.length === 0) return []
+
+      // 티켓 조회 시 소속 프로젝트 ID로 필터링
+      query = query.in('project_id', projectIds)
 
       if (filters?.status) query = query.eq('status', filters.status)
       if (filters?.project_id) query = query.eq('project_id', filters.project_id)
