@@ -217,7 +217,7 @@ export default function TicketDetailPage() {
     'WAITING': { label: '대기', color: 'border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5' },
     'ACCEPTED': { label: '접수', color: 'border-[#82B326] text-[#82B326] bg-[#82B326]/5' },
     'IN_PROGRESS': { label: '진행', color: 'border-[#82B326] text-[#82B326] bg-[#82B326]/5' },
-    'DELAYED': { label: '연기', color: 'border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5' },
+    'DELAYED': { label: '지연', color: 'border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5' },
     'REQUESTED': { label: '요청', color: 'border-[#242F67] text-[#242F67] bg-[#242F67]/5' },
     'COMPLETED': { label: '완료', color: 'border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5' },
   }
