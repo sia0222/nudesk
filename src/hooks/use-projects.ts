@@ -19,7 +19,8 @@ export function useProjects() {
         .from('projects')
         .select(`
           *,
-          members:project_members(count)
+          members:project_members(count),
+          customer:customers(company_name)
         `)
         .order('created_at', { ascending: false })
 
@@ -55,11 +56,11 @@ export function useCreateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ name, description, project_type, start_date, end_date, memberIds }: { name: string, description: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[] }) => {
+    mutationFn: async ({ name, project_type, start_date, end_date, memberIds, customer_id }: { name: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[], customer_id?: string | null }) => {
       // 1. 프로젝트 생성
       const { data: project, error: projectError } = await supabase
         .from('projects')
-        .insert([{ name, description, project_type, start_date: start_date || null, end_date: end_date || null }])
+        .insert([{ name, project_type, start_date: start_date || null, end_date: end_date || null, customer_id }])
         .select()
         .single()
 
@@ -96,11 +97,11 @@ export function useUpdateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, name, description, project_type, start_date, end_date, memberIds }: { id: string, name: string, description: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[] }) => {
+    mutationFn: async ({ id, name, project_type, start_date, end_date, memberIds, customer_id }: { id: string, name: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[], customer_id?: string | null }) => {
       // 1. 프로젝트 기본 정보 업데이트
       const { error: projectError } = await supabase
         .from('projects')
-        .update({ name, description, project_type, start_date: start_date || null, end_date: end_date || null })
+        .update({ name, project_type, start_date: start_date || null, end_date: end_date || null, customer_id })
         .eq('id', id)
 
       if (projectError) throw projectError

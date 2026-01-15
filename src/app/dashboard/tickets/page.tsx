@@ -595,95 +595,96 @@ export default function TicketsPage() {
                <TableHead className="w-[80px]"></TableHead>
              </TableRow>
            </TableHeader>
-           <TableBody>
-             {tickets && tickets.length > 0 ? (
-               tickets.map((ticket: any) => {
-                 const targetDate = ticket.end_date || ticket.deadline;
-                 const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
-                 
-                 return (
-                   <TableRow 
-                     key={ticket.id}
-                     className={cn(
-                       "group transition-all border-zinc-50",
-                       ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
-                     )}
-                   >
-                     <TableCell className="pl-10 text-center">
-                       <Badge className={cn(
-                         "font-black px-4 py-1 rounded-full text-[10px] shadow-sm",
-                         ticket.status === 'WAITING' ? "bg-amber-100 text-amber-600 hover:bg-amber-100 border-none" :
-                         ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600 hover:bg-blue-100 border-none" :
-                         "bg-zinc-100 text-zinc-500 hover:bg-zinc-100 border-none"
-                       )}>
-                         {ticket.status === 'WAITING' ? '대기' : ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? '진행' : '완료'}
-                       </Badge>
-                     </TableCell>
-                     <TableCell className="py-5">
-                       <span className="text-xs font-black text-zinc-400 uppercase tracking-tight leading-none">{ticket.project?.name || '---'}</span>
-                     </TableCell>
-                     <TableCell>
-                       <div className="flex items-center gap-2">
-                         {ticket.is_urgent && <Zap className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />}
-                         <span className={cn("font-black text-zinc-900 tracking-tight", ticket.is_urgent && "text-red-600")}>{ticket.title}</span>
-                         <Badge variant="outline" className="text-[9px] font-black h-4 px-1.5 rounded-md border-zinc-100 bg-white shadow-sm">
-                           {ticket.category === CAT_EMERGENCY ? "🚨 " : 
-                            ticket.category === CAT_ERROR ? "🛠️ " :
-                            ticket.category === CAT_REPAIR ? "🎨 " :
-                            ticket.category === CAT_REQUEST ? "📂 " :
-                            ticket.category === CAT_ADD ? "➕ " : ""}
-                           {ticket.category.includes('/') ? ticket.category.split('/')[1].trim() : ticket.category}
-                         </Badge>
-                       </div>
-                     </TableCell>
-                     <TableCell>
-                       <div className="flex items-center gap-2 font-black text-zinc-600 text-xs text-center">
-                         {targetDate ? format(new Date(targetDate), "yyyy-MM-dd") : '---'}
-                       </div>
-                     </TableCell>
-                     <TableCell>
-                       {ticket.status === 'COMPLETED' ? (
-                         <span className="text-zinc-300 font-black text-xs">-</span>
-                       ) : dDay !== null ? (
-                         <span className={cn(
-                           "font-black text-xs",
-                           dDay < 0 ? "text-red-600" : 
-                           dDay === 0 ? "text-red-600" :
-                           "text-blue-600"
-                         )}>
-                           {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
-                         </span>
-                       ) : (
-                         <span className="text-zinc-300 text-xs">---</span>
-                       )}
-                     </TableCell>
-                     <TableCell>
-                       <div className="flex items-center gap-2 font-black text-zinc-400 text-xs">
-                         <Clock className="h-4 w-4 opacity-50" />
-                         {format(new Date(ticket.created_at), "yyyy-MM-dd")}
-                       </div>
-                     </TableCell>
-                     <TableCell className="pr-10 text-right">
-                       <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
-                         <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
-                       </Button>
-                     </TableCell>
-                   </TableRow>
-                 )
-               })
-             ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-56 text-center">
-                  <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center">
-                      <ClipboardList className="h-8 w-8 text-zinc-200" />
+            <TableBody>
+              {tickets && tickets.length > 0 ? (
+                tickets.map((ticket: any) => {
+                  const targetDate = ticket.end_date || ticket.deadline;
+                  const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
+                  
+                  return (
+                    <TableRow 
+                      key={ticket.id}
+                      className={cn(
+                        "group transition-all border-zinc-50",
+                        ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
+                      )}
+                    >
+                      <TableCell className="pl-10 text-center">
+                        <Badge className={cn(
+                          "font-black px-4 py-1 rounded-full text-[10px] shadow-sm",
+                          ticket.status === 'WAITING' ? "bg-amber-100 text-amber-600 hover:bg-amber-100 border-none" :
+                          ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600 hover:bg-blue-100 border-none" :
+                          "bg-zinc-100 text-zinc-500 hover:bg-zinc-100 border-none"
+                        )}>
+                          {ticket.status === 'WAITING' ? '대기' : ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? '진행' : '완료'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-5">
+                        <span className="text-xs font-black text-zinc-400 uppercase tracking-tight leading-none">{ticket.project?.name || '---'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {ticket.is_urgent && <Zap className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />}
+                          <span className={cn("font-black text-zinc-900 tracking-tight", ticket.is_urgent && "text-red-600")}>{ticket.title}</span>
+                          <Badge variant="outline" className="text-[9px] font-black h-4 px-1.5 rounded-md border-zinc-100 bg-white shadow-sm">
+                            {ticket.category === CAT_EMERGENCY ? "🚨 " : 
+                             ticket.category === CAT_ERROR ? "🛠️ " :
+                             ticket.category === CAT_REPAIR ? "🎨 " :
+                             ticket.category === CAT_REQUEST ? "📂 " :
+                             ticket.category === CAT_ADD ? "➕ " : ""}
+                            {ticket.category.includes('/') ? ticket.category.split('/')[1].trim() : ticket.category}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 font-black text-zinc-600 text-xs text-center">
+                          {targetDate ? format(new Date(targetDate), "yyyy-MM-dd") : '---'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {ticket.status === 'COMPLETED' ? (
+                          <span className="text-zinc-300 font-black text-xs">-</span>
+                        ) : dDay !== null ? (
+                          <span className={cn(
+                            "font-black text-xs",
+                            dDay < 0 ? "text-red-600" : 
+                            dDay === 0 ? "text-red-600" :
+                            "text-blue-600"
+                          )}>
+                            {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-300 text-xs">---</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 font-black text-zinc-400 text-xs">
+                          <Clock className="h-4 w-4 opacity-50" />
+                          {format(new Date(ticket.created_at), "yyyy-MM-dd")}
+                        </div>
+                      </TableCell>
+                      <TableCell className="pr-10 text-right">
+                        <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
+                          <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
+                        <ClipboardList className="h-8 w-8 text-zinc-200" />
+                      </div>
+                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">조회 가능한 티켓이 없습니다</h3>
+                      <p className="text-zinc-400 text-sm font-medium mt-1">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>
                     </div>
-                    <p className="text-zinc-400 font-black tracking-tight">조회 가능한 티켓이 없습니다.</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
         </Table>
       </Card>
     </PageContainer>

@@ -17,7 +17,10 @@ export function useAllUsers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          customer:customers(company_name)
+        `)
         .order('role', { ascending: true })
 
       if (error) throw error

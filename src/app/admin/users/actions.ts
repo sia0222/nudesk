@@ -12,6 +12,7 @@ export async function registerUserAction(formData: {
   role: 'ADMIN' | 'STAFF' | 'CUSTOMER'
   email?: string
   phone?: string
+  customer_id?: string | null
 }) {
   console.log('[registerUserAction] Starting user registration:', formData.username)
 
@@ -42,6 +43,7 @@ export async function registerUserAction(formData: {
         email: formData.email || null,
         phone: formData.phone || null,
         role: formData.role,
+        customer_id: formData.role === 'CUSTOMER' ? formData.customer_id : null,
         is_approved: true // 관리자가 직접 등록한 유저는 자동 승인
       })
       .select()
@@ -70,6 +72,7 @@ export async function updateUserAction(id: string, formData: {
   role: 'ADMIN' | 'STAFF' | 'CUSTOMER'
   email?: string
   phone?: string
+  customer_id?: string | null
 }) {
   const supabase = createClient()
 
@@ -82,6 +85,7 @@ export async function updateUserAction(id: string, formData: {
         role: formData.role,
         email: formData.email || null,
         phone: formData.phone || null,
+        customer_id: formData.role === 'CUSTOMER' ? formData.customer_id : null,
       })
       .eq('id', id)
       .select()

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAllUsers, useUpdateUserRole, useCreateUser, useUpdateUser, useResetPassword } from '@/hooks/use-admin'
+import { useCustomers } from '@/hooks/use-customers'
 import {
   Table,
   TableBody,
@@ -39,6 +40,7 @@ import { PageHeader } from "@/components/layout/page-header"
 
 export default function AdminUsersPage() {
   const { data: users, isLoading } = useAllUsers()
+  const { data: customers } = useCustomers()
   const updateRoleMutation = useUpdateUserRole()
   const createUserMutation = useCreateUser()
   const updateUserMutation = useUpdateUser()
@@ -52,6 +54,7 @@ export default function AdminUsersPage() {
     email: '',
     phone: '',
     role: 'STAFF' as 'ADMIN' | 'STAFF' | 'CUSTOMER',
+    customer_id: '' as string | null,
   })
 
   const handleOpenDialog = (user?: any) => {
@@ -63,6 +66,7 @@ export default function AdminUsersPage() {
         email: user.email || '',
         phone: user.phone || '',
         role: user.role,
+        customer_id: user.customer_id || '',
       })
     } else {
       setEditingUser(null)
@@ -72,6 +76,7 @@ export default function AdminUsersPage() {
         email: '',
         phone: '',
         role: 'STAFF',
+        customer_id: '',
       })
     }
     setIsDialogOpen(true)
@@ -232,6 +237,27 @@ export default function AdminUsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {formData.role === 'CUSTOMER' && (
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-black text-zinc-700 ml-1">소속 고객사 선택</Label>
+                    <Select 
+                      value={formData.customer_id || "none"} 
+                      onValueChange={(value: any) => setFormData({...formData, customer_id: value === "none" ? null : value})}
+                    >
+                      <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
+                        <SelectValue placeholder="고객사를 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
+                        <SelectItem value="none" className="font-bold py-3 text-zinc-400">선택 안 함</SelectItem>
+                        {customers?.map((customer: any) => (
+                          <SelectItem key={customer.id} value={customer.id} className="font-bold py-3">
+                            {customer.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button 
@@ -277,48 +303,69 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users?.map((user) => (
-                <TableRow key={user.id} className="hover:bg-zinc-50/50 transition-colors border-zinc-50">
-                  <TableCell className="font-mono text-xs py-6 pl-10 text-zinc-500 font-bold">{user.username}</TableCell>
-                  <TableCell className="font-black text-zinc-900">{user.full_name}</TableCell>
-                  <TableCell className="text-zinc-500 text-sm font-bold">{user.email || '-'}</TableCell>
-                  <TableCell className="text-zinc-500 text-sm font-bold">{user.phone || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn(
-                      "px-4 py-1 rounded-full font-black text-[10px] border-2 shadow-sm",
-                      user.role === 'MASTER' ? "border-zinc-900 bg-zinc-900 text-white" :
-                      user.role === 'ADMIN' ? "border-blue-500 text-blue-600 bg-blue-50/50" : 
-                      user.role === 'STAFF' ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" : "border-zinc-200 text-zinc-400 bg-zinc-50/50"
-                    )}>
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right pr-10">
-                    {user.role !== 'MASTER' && (
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-10 px-4 rounded-xl font-black gap-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-all"
-                          onClick={() => handleOpenDialog(user)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                          수정
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-10 px-4 rounded-xl font-black gap-2 text-amber-600 hover:bg-amber-50 transition-all"
-                          onClick={() => handleResetPassword(user.id, user.username)}
-                        >
-                          <KeyRound className="h-4 w-4" />
-                          초기화
-                        </Button>
+              {users && users.length > 0 ? (
+                users.map((user) => (
+                  <TableRow key={user.id} className="hover:bg-zinc-50/50 transition-colors border-zinc-50">
+                    <TableCell className="font-mono text-xs py-6 pl-10 text-zinc-500 font-bold">{user.username}</TableCell>
+                    <TableCell className="font-black text-zinc-900">
+                      {user.full_name}
+                      {user.customer && (
+                        <p className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mt-1 inline-block">
+                          {user.customer.company_name}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-zinc-500 text-sm font-bold">{user.email || '-'}</TableCell>
+                    <TableCell className="text-zinc-500 text-sm font-bold">{user.phone || '-'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn(
+                        "px-4 py-1 rounded-full font-black text-[10px] border-2 shadow-sm",
+                        user.role === 'MASTER' ? "border-zinc-900 bg-zinc-900 text-white" :
+                        user.role === 'ADMIN' ? "border-blue-500 text-blue-600 bg-blue-50/50" : 
+                        user.role === 'STAFF' ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" : "border-zinc-200 text-zinc-400 bg-zinc-50/50"
+                      )}>
+                        {user.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right pr-10">
+                      {user.role !== 'MASTER' && (
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 px-4 rounded-xl font-black gap-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-all"
+                            onClick={() => handleOpenDialog(user)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                            수정
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 px-4 rounded-xl font-black gap-2 text-amber-600 hover:bg-amber-50 transition-all"
+                            onClick={() => handleResetPassword(user.id, user.username)}
+                          >
+                            <KeyRound className="h-4 w-4" />
+                            초기화
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
+                        <Users className="h-8 w-8 text-zinc-200" />
                       </div>
-                    )}
+                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">등록된 인력이 없습니다</h3>
+                      <p className="text-zinc-400 text-sm font-medium mt-1">시스템을 이용할 관리자나 직원을 등록해 주세요.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>

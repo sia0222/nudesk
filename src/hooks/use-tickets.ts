@@ -20,6 +20,13 @@ export function useTickets(filters?: any) {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
+      // 현재 유저의 정보(role, customer_id) 가져오기
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, customer_id')
+        .eq('id', session.userId)
+        .single()
+
       let query = supabase
         .from('tickets')
         .select(`
@@ -30,17 +37,23 @@ export function useTickets(filters?: any) {
         `)
         .order('created_at', { ascending: false })
 
-      // 현재 사용자가 참여 중인 프로젝트의 티켓만 조회
-      const { data: memberships } = await supabase
-        .from('project_members')
-        .select('project_id')
-        .eq('user_id', session.userId)
-
-      if (memberships && memberships.length > 0) {
-        const projectIds = memberships.map(m => m.project_id)
-        query = query.in('project_id', projectIds)
+      // 권한 및 소속에 따른 필터링
+      if (profile?.role === 'CUSTOMER' && profile?.customer_id) {
+        // 고객은 자기 회사 티켓만 조회
+        query = query.eq('customer_id', profile.customer_id)
       } else {
-        return []
+        // 마스터/관리자/직원은 참여 중인 프로젝트의 티켓 조회
+        const { data: memberships } = await supabase
+          .from('project_members')
+          .select('project_id')
+          .eq('user_id', session.userId)
+
+        if (memberships && memberships.length > 0) {
+          const projectIds = memberships.map(m => m.project_id)
+          query = query.in('project_id', projectIds)
+        } else if (profile?.role !== 'MASTER' && profile?.role !== 'ADMIN') {
+          return []
+        }
       }
 
       if (filters?.status) query = query.eq('status', filters.status)
@@ -62,6 +75,13 @@ export function useCreateTicket() {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
+      // 현재 유저의 customer_id 가져오기
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('customer_id')
+        .eq('id', session.userId)
+        .single()
+
       const { assigned_to_ids, files, ...ticketData } = formData;
 
       // 1. 티켓 생성
@@ -70,6 +90,7 @@ export function useCreateTicket() {
         .insert([{
           ...ticketData,
           requester_id: session.userId,
+          customer_id: profile?.customer_id || null, // 고객사 ID 자동 할당
           status: 'WAITING'
         }])
         .select()

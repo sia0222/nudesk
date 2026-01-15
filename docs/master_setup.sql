@@ -52,11 +52,11 @@ CREATE TABLE public.profiles (
 CREATE TABLE public.projects (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
-    description TEXT,
     project_type project_type DEFAULT '개발',
     start_date DATE,
     end_date DATE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL
 );
 
 CREATE TABLE public.project_members (
@@ -126,8 +126,8 @@ INSERT INTO public.profiles (username, password, full_name, role, is_approved) V
 ('customer', '3348', '테스트 고객', 'CUSTOMER', true);
 
 -- 7. 샘플 프로젝트
-INSERT INTO public.projects (name, description) VALUES
-('NuDesk 시스템 개발', '실무 참여형 스마트 관리 시스템 개발 프로젝트');
+INSERT INTO public.projects (name) VALUES
+('NuDesk 시스템 개발');
 
 -- 8. 프로젝트 멤버십 (모든 사용자를 프로젝트에 추가)
 INSERT INTO public.project_members (project_id, user_id)

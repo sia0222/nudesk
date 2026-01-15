@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Home, LayoutGrid, Users, Briefcase, Settings, LogOut, Loader2 } from 'lucide-react'
+import { LayoutGrid, Users, Briefcase, Settings, LogOut, Loader2, Building2 } from 'lucide-react'
 import { signOut, getCurrentSession } from '@/lib/authHelpers'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/utils/supabase/client'
@@ -60,12 +60,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace('/login')
   }
 
-  // 메뉴 정보 (요구사항 반영: 승인 관리 제외)
+  // 메뉴 정보 (요구사항 반영: 홈 메뉴 제외)
   const navItems = [
-    { name: '홈', href: '/dashboard', icon: Home },
-    { name: '프로젝트 관리', href: '/dashboard/projects', icon: LayoutGrid, roles: ['MASTER', 'ADMIN'] },
-    { name: '인력 관리', href: '/admin/users', icon: Users, roles: ['MASTER', 'ADMIN'] },
     { name: '접수 리스트', href: '/dashboard/tickets', icon: Briefcase },
+    { name: '인력 관리', href: '/admin/users', icon: Users, roles: ['MASTER', 'ADMIN'] },
+    { name: '고객사 관리', href: '/admin/customers', icon: Building2, roles: ['MASTER', 'ADMIN'] },
+    { name: '프로젝트 관리', href: '/dashboard/projects', icon: LayoutGrid, roles: ['MASTER', 'ADMIN'] },
   ]
 
   const filteredNavItems = navItems.filter(item => 
