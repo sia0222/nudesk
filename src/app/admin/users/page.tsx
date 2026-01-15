@@ -148,8 +148,8 @@ export default function AdminUsersPage() {
               신규 인력 등록
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[450px] rounded-[2.5rem] p-10 border-none shadow-2xl">
-            <form onSubmit={handleSubmit}>
+          <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-hidden flex flex-col rounded-[2.5rem] p-0 border-none shadow-2xl">
+            <div className="p-10 pb-5 flex-none">
               <DialogHeader>
                 <DialogTitle className="text-3xl font-black tracking-tighter">
                   {editingUser ? '인력 정보 수정' : '신규 인력 등록'}
@@ -158,110 +158,119 @@ export default function AdminUsersPage() {
                   {editingUser ? `${editingUser.username} 님의 정보를 수정합니다.` : '새로운 관리자 또는 직원의 계정 정보를 입력하세요.'}
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-6 py-8">
-                <div className="grid gap-2">
-                  <Label htmlFor="username" className="text-sm font-black text-zinc-700 ml-1">아이디 (사용자명)</Label>
-                  <Input
-                    id="username"
-                    placeholder="영어 또는 숫자"
-                    className={cn(
-                      "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
-                      formData.username && (
-                        !/^[a-zA-Z0-9]+$/.test(formData.username) || 
-                        users?.some((u: any) => u.username.toLowerCase() === formData.username.toLowerCase() && u.id !== editingUser?.id)
-                      ) && "border-red-500 focus:ring-red-500"
-                    )}
-                    value={formData.username}
-                    onChange={(e) => setFormData({...formData, username: e.target.value})}
-                    required
-                  />
-                  {formData.username && !/^[a-zA-Z0-9]+$/.test(formData.username) && (
-                    <p className="text-xs text-red-500 font-bold ml-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      영어와 숫자만 사용 가능합니다.
-                    </p>
-                  )}
-                  {formData.username && /^[a-zA-Z0-9]+$/.test(formData.username) && 
-                    users?.some((u: any) => u.username.toLowerCase() === formData.username.toLowerCase() && u.id !== editingUser?.id) && (
-                    <p className="text-xs text-red-500 font-bold ml-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      사용 중인 아이디입니다. 다시 입력해주세요.
-                    </p>
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="full_name" className="text-sm font-black text-zinc-700 ml-1">이름 (성함)</Label>
-                  <Input
-                    id="full_name"
-                    placeholder="실명 입력"
-                    className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-sm font-black text-zinc-700 ml-1">이메일 (선택)</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="example@nudesk.kr"
-                    className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="phone" className="text-sm font-black text-zinc-700 ml-1">연락처 (선택)</Label>
-                  <Input
-                    id="phone"
-                    placeholder="010-0000-0000"
-                    className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-sm font-black text-zinc-700 ml-1">권한 설정</Label>
-                  <Select 
-                    value={formData.role} 
-                    onValueChange={(value: any) => setFormData({...formData, role: value})}
-                  >
-                    <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
-                      <SelectValue placeholder="권한 선택" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
-                      <SelectItem value="ADMIN" className="font-bold py-3">ADMIN (운영 관리자)</SelectItem>
-                      <SelectItem value="STAFF" className="font-bold py-3">STAFF (실무 직원)</SelectItem>
-                      <SelectItem value="CUSTOMER" className="font-bold py-3">CUSTOMER (고객)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.role === 'CUSTOMER' && (
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
+              <div className="px-10">
+                <form id="user-form" onSubmit={handleSubmit} className="space-y-6 py-4">
                   <div className="grid gap-2">
-                    <Label className="text-sm font-black text-zinc-700 ml-1">소속 고객사 선택</Label>
+                    <Label htmlFor="username" className="text-sm font-black text-zinc-700 ml-1">아이디 (사용자명)</Label>
+                    <Input
+                      id="username"
+                      placeholder="영어 또는 숫자"
+                      className={cn(
+                        "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
+                        formData.username && (
+                          !/^[a-zA-Z0-9]+$/.test(formData.username) || 
+                          users?.some((u: any) => u.username.toLowerCase() === formData.username.toLowerCase() && u.id !== editingUser?.id)
+                        ) && "border-red-500 focus:ring-red-500"
+                      )}
+                      value={formData.username}
+                      onChange={(e) => setFormData({...formData, username: e.target.value})}
+                      required
+                    />
+                    {formData.username && !/^[a-zA-Z0-9]+$/.test(formData.username) && (
+                      <p className="text-xs text-red-500 font-bold ml-1 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        영어와 숫자만 사용 가능합니다.
+                      </p>
+                    )}
+                    {formData.username && /^[a-zA-Z0-9]+$/.test(formData.username) && 
+                      users?.some((u: any) => u.username.toLowerCase() === formData.username.toLowerCase() && u.id !== editingUser?.id) && (
+                      <p className="text-xs text-red-500 font-bold ml-1 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        사용 중인 아이디입니다. 다시 입력해주세요.
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="full_name" className="text-sm font-black text-zinc-700 ml-1">이름 (성함)</Label>
+                    <Input
+                      id="full_name"
+                      placeholder="실명 입력"
+                      className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email" className="text-sm font-black text-zinc-700 ml-1">이메일 (선택)</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="example@nudesk.kr"
+                      className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone" className="text-sm font-black text-zinc-700 ml-1">연락처 (선택)</Label>
+                    <Input
+                      id="phone"
+                      placeholder="010-0000-0000"
+                      className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-black text-zinc-700 ml-1">권한 설정</Label>
                     <Select 
-                      value={formData.customer_id || "none"} 
-                      onValueChange={(value: any) => setFormData({...formData, customer_id: value === "none" ? null : value})}
+                      value={formData.role} 
+                      onValueChange={(value: any) => setFormData({...formData, role: value})}
                     >
                       <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
-                        <SelectValue placeholder="고객사를 선택하세요" />
+                        <SelectValue placeholder="권한 선택" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
-                        <SelectItem value="none" className="font-bold py-3 text-[#9CA3AF]">선택 안 함</SelectItem>
-                        {customers?.map((customer: any) => (
-                          <SelectItem key={customer.id} value={customer.id} className="font-bold py-3">
-                            {customer.company_name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="ADMIN" className="font-bold py-3">ADMIN (운영 관리자)</SelectItem>
+                        <SelectItem value="STAFF" className="font-bold py-3">STAFF (실무 직원)</SelectItem>
+                        <SelectItem value="CUSTOMER" className="font-bold py-3">CUSTOMER (고객)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                )}
+                  {formData.role === 'CUSTOMER' && (
+                    <div className="grid gap-2 pb-6">
+                      <Label className="text-sm font-black text-zinc-700 ml-1">소속 고객사 선택</Label>
+                      <Select 
+                        value={formData.customer_id || "none"} 
+                        onValueChange={(value: any) => setFormData({...formData, customer_id: value === "none" ? null : value})}
+                      >
+                        <SelectTrigger className="h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium">
+                          <SelectValue placeholder="고객사를 선택하세요" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
+                          <SelectItem value="none" className="font-bold py-3 text-[#9CA3AF]">선택 안 함</SelectItem>
+                          {customers?.map((customer: any) => (
+                            <SelectItem key={customer.id} value={customer.id} className="font-bold py-3">
+                              {customer.company_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </form>
               </div>
+            </div>
+
+            <div className="p-10 pt-5 border-t bg-zinc-50/50 flex-none">
               <DialogFooter>
                 <Button 
                   type="submit" 
+                  form="user-form"
                   className="w-full h-16 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-lg shadow-xl shadow-zinc-200 transition-all active:scale-95"
                   disabled={createUserMutation.isPending || updateUserMutation.isPending}
                 >
@@ -274,7 +283,7 @@ export default function AdminUsersPage() {
                   )}
                 </Button>
               </DialogFooter>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
       </PageHeader>

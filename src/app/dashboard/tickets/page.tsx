@@ -262,49 +262,50 @@ export default function TicketsPage() {
       >
         {profile?.role !== 'MASTER' && (profile?.role !== 'CUSTOMER' || (profile?.customer_id && myProjects && myProjects.length > 0)) && (
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
-                        <Plus className="h-5 w-5" />
-                        {profile?.role === 'CUSTOMER' ? '업무 접수하기' : '새 티켓 등록'}
-                      </Button>
-                    </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
+                <Plus className="h-5 w-5" />
+                {profile?.role === 'CUSTOMER' ? '업무 접수하기' : '새 티켓 등록'}
+              </Button>
+            </DialogTrigger>
             <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col rounded-[2.5rem] p-0 border-none shadow-2xl">
-              <DialogHeader className="p-10 pb-5 flex-none">
-                <DialogTitle className="text-3xl font-black tracking-tighter">
-                  {profile?.role === 'CUSTOMER' ? '업무 접수' : '새 티켓 등록'}
-                </DialogTitle>
-                <DialogDescription className="font-bold text-[#9CA3AF]">
-                  상세 정보를 입력하여 업무를 접수해 주세요.
-                </DialogDescription>
-              </DialogHeader>
+              <div className="p-10 pb-5 flex-none">
+                <DialogHeader>
+                  <DialogTitle className="text-3xl font-black tracking-tighter">
+                    {profile?.role === 'CUSTOMER' ? '업무 접수' : '새 티켓 등록'}
+                  </DialogTitle>
+                  <DialogDescription className="font-bold text-[#9CA3AF]">
+                    상세 정보를 입력하여 업무를 접수해 주세요.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
 
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="px-10">
-                    <form id="ticket-form" onSubmit={handleCreateTicket} className="space-y-8 pb-10">
-                      <div className="grid grid-cols-2 gap-6">
-                        {/* 프로젝트 선택: 고객사이고 프로젝트가 1개인 경우 숨김 */}
-                        {!(profile?.role === 'CUSTOMER' && myProjects?.length === 1) && (
-                          <div className="grid gap-2 col-span-2">
-                            <Label className="text-sm font-black text-zinc-700 ml-1">프로젝트</Label>
-                            <Select 
-                              onValueChange={(v) => handleInputChange('project_id', v)} 
-                              value={formData.project_id}
-                              required
-                            >
-                              <SelectTrigger className={cn(
-                                "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
-                                errors.project_id && "border-red-500 bg-red-50/30"
-                              )}>
-                                <SelectValue placeholder="프로젝트를 선택하세요" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
-                                {myProjects?.map(p => <SelectItem key={p.id} value={p.id} className="font-bold py-3">{p.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            {errors.project_id && <p className="text-xs font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
-                          </div>
-                        )}
+              <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
+                <div className="px-10">
+                  <form id="ticket-form" onSubmit={handleCreateTicket} className="space-y-8 py-10">
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* 프로젝트 선택: 고객사이고 프로젝트가 1개인 경우 숨김 */}
+                      {!(profile?.role === 'CUSTOMER' && myProjects?.length === 1) && (
+                        <div className="grid gap-2 col-span-2">
+                          <Label className="text-sm font-black text-zinc-700 ml-1">프로젝트</Label>
+                          <Select 
+                            onValueChange={(v) => handleInputChange('project_id', v)} 
+                            value={formData.project_id}
+                            required
+                          >
+                            <SelectTrigger className={cn(
+                              "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
+                              errors.project_id && "border-red-500 bg-red-50/30"
+                            )}>
+                              <SelectValue placeholder="프로젝트를 선택하세요" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
+                              {myProjects?.map(p => <SelectItem key={p.id} value={p.id} className="font-bold py-3">{p.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          {errors.project_id && <p className="text-xs font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
+                        </div>
+                      )}
 
                         {/* 접수 유형: 고객사인 경우 숨김 (자동으로 '온라인' 저장) */}
                         {profile?.role !== 'CUSTOMER' && (
@@ -557,8 +558,7 @@ export default function TicketsPage() {
                     </div>
                   </form>
                 </div>
-              </ScrollArea>
-            </div>
+              </div>
 
             <DialogFooter className="p-10 pt-5 border-t bg-zinc-50/50 flex-none">
               <Button 

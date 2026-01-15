@@ -182,21 +182,21 @@ export default function AdminCustomersPage() {
               신규 고객사 등록
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px] rounded-[2.5rem] p-0 border-none shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <form onSubmit={handleSubmit} className="flex flex-col h-full">
-              <div className="p-10 pb-5">
-                <DialogHeader>
-                  <DialogTitle className="text-3xl font-black tracking-tighter">
-                    {editingCustomer ? '고객사 정보 수정' : '신규 고객사 등록'}
-                  </DialogTitle>
-                  <DialogDescription className="font-bold text-[#9CA3AF]">
-                    {editingCustomer ? `${editingCustomer.company_name} 정보를 수정합니다.` : '새로운 고객사의 정보를 입력하세요.'}
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
+          <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-hidden flex flex-col rounded-[2.5rem] p-0 border-none shadow-2xl">
+            <div className="p-10 pb-5 flex-none">
+              <DialogHeader>
+                <DialogTitle className="text-3xl font-black tracking-tighter">
+                  {editingCustomer ? '고객사 정보 수정' : '신규 고객사 등록'}
+                </DialogTitle>
+                <DialogDescription className="font-bold text-[#9CA3AF]">
+                  {editingCustomer ? `${editingCustomer.company_name} 정보를 수정합니다.` : '새로운 고객사의 정보를 입력하세요.'}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
 
-              <ScrollArea className="flex-1 px-10">
-                <div className="grid gap-6 py-4">
+            <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
+              <div className="px-10">
+                <form id="customer-form" onSubmit={handleSubmit} className="space-y-6 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="company_name" className="text-sm font-black text-zinc-700 ml-1">회사명</Label>
                     <Input
@@ -227,7 +227,7 @@ export default function AdminCustomersPage() {
                       </span>
                     </Label>
                     <div className="bg-zinc-50 rounded-[1.5rem] p-2 border border-zinc-100">
-                      <ScrollArea className="h-[150px] px-2">
+                      <div className="h-[150px] overflow-y-auto px-2">
                         <div className="grid grid-cols-2 gap-2 py-2">
                           {customerIndividuals.map((user: any) => (
                             <div
@@ -264,11 +264,11 @@ export default function AdminCustomersPage() {
                             </div>
                           )}
                         </div>
-                      </ScrollArea>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="grid gap-3 pt-2">
+                  <div className="grid gap-3 pt-2 pb-6">
                     <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                       관련 서류 (계약서/세금계산서)
                       <span className="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
@@ -299,27 +299,28 @@ export default function AdminCustomersPage() {
                       </label>
                     </div>
                   </div>
-                </div>
-              </ScrollArea>
-
-              <div className="p-10 pt-5">
-                <DialogFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full h-16 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-lg shadow-xl shadow-zinc-200 transition-all active:scale-95"
-                    disabled={createCustomerMutation.isPending || updateCustomerMutation.isPending || isUploading}
-                  >
-                    {createCustomerMutation.isPending || updateCustomerMutation.isPending ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : editingCustomer ? (
-                      '정보 수정 완료'
-                    ) : (
-                      '고객사 등록 완료'
-                    )}
-                  </Button>
-                </DialogFooter>
+                </form>
               </div>
-            </form>
+            </div>
+
+            <div className="p-10 pt-5 border-t bg-zinc-50/50 flex-none">
+              <DialogFooter>
+                <Button 
+                  type="submit" 
+                  form="customer-form"
+                  className="w-full h-16 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-lg shadow-xl shadow-zinc-200 transition-all active:scale-95"
+                  disabled={createCustomerMutation.isPending || updateCustomerMutation.isPending || isUploading}
+                >
+                  {createCustomerMutation.isPending || updateCustomerMutation.isPending ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : editingCustomer ? (
+                    '정보 수정 완료'
+                  ) : (
+                    '고객사 등록 완료'
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </PageHeader>
