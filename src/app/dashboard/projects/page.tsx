@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useProjects, useCreateProject, useUpdateProject, useProjectMembers } from '@/hooks/use-projects'
+import { useProjects, useCreateProject, useUpdateProject, useProjectMembers, useToggleProjectStatus } from '@/hooks/use-projects'
 import { useProjectUsers } from '@/hooks/use-admin'
 import { useCustomers } from '@/hooks/use-customers'
 import {
@@ -23,8 +23,11 @@ import {
   Loader2, 
   Check, 
   Briefcase,
+  LayoutGrid,
   Edit2,
-  Search
+  Search,
+  Power,
+  PowerOff
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -80,6 +83,8 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
       fetchMembers()
     }
   }, [isOpen, project.id, supabase])
+
+  const activeCustomers = customers?.filter((c: any) => c.is_active) || []
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault()
@@ -182,7 +187,7 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
               <div className="bg-zinc-50 rounded-[1.5rem] p-2 border border-zinc-100">
                 <ScrollArea className="h-[120px] px-2">
                   <div className="grid grid-cols-2 gap-2 py-2">
-                    {customers?.map((customer: any) => (
+                    {activeCustomers.map((customer: any) => (
                       <div
                         key={customer.id}
                         onClick={() => setFormData({...formData, customer_id: formData.customer_id === customer.id ? '' : customer.id})}
@@ -294,6 +299,8 @@ export default function ProjectsPage() {
     memberIds: [] as string[]
   })
 
+  const activeCustomers = customers?.filter((c: any) => c.is_active) || []
+
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name) return
@@ -318,6 +325,15 @@ export default function ProjectsPage() {
     }))
   }
 
+  const toggleStatusMutation = useToggleProjectStatus()
+
+  const handleToggleStatus = (id: string, name: string, currentStatus: boolean) => {
+    const action = currentStatus ? '비활성화' : '활성화'
+    if (confirm(`${name} 프로젝트를 ${action}하시겠습니까?`)) {
+      toggleStatusMutation.mutate({ id, is_active: !currentStatus })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-[400px] items-center justify-center">
@@ -329,7 +345,7 @@ export default function ProjectsPage() {
   return (
     <PageContainer>
       <PageHeader 
-        icon={Briefcase} 
+        icon={LayoutGrid} 
         title="프로젝트 관리" 
         description="실무 그룹을 생성하고 프로젝트별 인력을 배치합니다."
       >
@@ -409,19 +425,19 @@ export default function ProjectsPage() {
                       </span>
                     </Label>
                     <div className="bg-zinc-50 rounded-[1.5rem] p-2 border border-zinc-100">
-                      <ScrollArea className="h-[120px] px-2">
-                        <div className="grid grid-cols-2 gap-2 py-2">
-                          {customers?.map((customer: any) => (
-                            <div
-                              key={customer.id}
-                              onClick={() => setFormData({...formData, customer_id: formData.customer_id === customer.id ? '' : customer.id})}
-                              className={cn(
-                                "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer",
-                                formData.customer_id === customer.id
-                                  ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
-                                  : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
-                              )}
-                            >
+                    <ScrollArea className="h-[120px] px-2">
+                      <div className="grid grid-cols-2 gap-2 py-2">
+                        {activeCustomers.map((customer: any) => (
+                          <div
+                            key={customer.id}
+                            onClick={() => setFormData({...formData, customer_id: formData.customer_id === customer.id ? '' : customer.id})}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer",
+                              formData.customer_id === customer.id
+                                ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
+                                : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
+                            )}
+                          >
                               <div className={cn(
                                 "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
                                 formData.customer_id === customer.id ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
@@ -516,7 +532,8 @@ export default function ProjectsPage() {
           <Table>
             <TableHeader className="bg-zinc-50/50">
               <TableRow className="hover:bg-transparent border-zinc-50">
-                <TableHead className="font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest">프로젝트명</TableHead>
+                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">상태</TableHead>
+                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">프로젝트명</TableHead>
                 <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">고객사</TableHead>
                 <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">종류</TableHead>
                 <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">기간</TableHead>
@@ -528,8 +545,24 @@ export default function ProjectsPage() {
               <AnimatePresence mode="popLayout">
                 {projects && projects.length > 0 ? (
                   projects.map((project: any) => (
-                    <TableRow key={project.id} className="hover:bg-zinc-50/50 transition-colors border-zinc-50">
+                    <TableRow 
+                      key={project.id} 
+                      className={cn(
+                        "hover:bg-zinc-50/50 transition-colors border-zinc-50",
+                        !project.is_active && "bg-zinc-50/30 grayscale-[0.8] opacity-70"
+                      )}
+                    >
                       <TableCell className="py-6 pl-10">
+                        <Badge variant="outline" className={cn(
+                          "px-3 py-0.5 rounded-full font-black text-[10px] border-2",
+                          project.is_active 
+                            ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" 
+                            : "border-zinc-300 text-zinc-400 bg-zinc-100"
+                        )}>
+                          {project.is_active ? '활성' : '비활성'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <span className="font-black text-zinc-900 text-base tracking-tighter">{project.name}</span>
                       </TableCell>
                       <TableCell>
@@ -554,18 +587,44 @@ export default function ProjectsPage() {
                         {new Date(project.created_at).toLocaleDateString('ko-KR')}
                       </TableCell>
                       <TableCell className="text-right pr-10">
-                        <EditProjectDialog project={project} allUsers={allUsers || []} customers={customers || []} />
+                        <div className="flex items-center justify-end gap-1">
+                          <EditProjectDialog project={project} allUsers={allUsers || []} customers={customers || []} />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                              "h-10 px-4 rounded-xl font-black gap-2 transition-all",
+                              project.is_active 
+                                ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700" 
+                                : "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                            )}
+                            onClick={() => handleToggleStatus(project.id, project.name, project.is_active)}
+                            disabled={toggleStatusMutation.isPending}
+                          >
+                            {project.is_active ? (
+                              <>
+                                <PowerOff className="h-4 w-4" />
+                                비활성화
+                              </>
+                            ) : (
+                              <>
+                                <Power className="h-4 w-4" />
+                                활성화
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-20 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
-                          <FolderKanban className="h-8 w-8 text-zinc-200" />
-                        </div>
-                        <h3 className="text-lg font-black text-zinc-900 tracking-tighter">진행 중인 프로젝트가 없습니다</h3>
+                    <TableCell colSpan={7} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
+                        <LayoutGrid className="h-8 w-8 text-zinc-200" />
+                      </div>
+                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">진행 중인 프로젝트가 없습니다</h3>
                         <p className="text-zinc-400 text-sm font-medium mt-1">첫 번째 프로젝트를 생성하여 협업을 시작하세요.</p>
                       </div>
                     </TableCell>

@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Zap, Loader2, AlertCircle, PlusCircle, ClipboardList, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon } from "lucide-react"
+import { Clock, Zap, Loader2, AlertCircle, PlusCircle, Briefcase, ClipboardList, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useTickets, useCreateTicket } from "@/hooks/use-tickets"
@@ -86,24 +86,49 @@ export default function TicketsPage() {
     queryFn: async () => {
       if (!session || !profile) return []
       
-      // 고객(CUSTOMER) 권한인 경우: 본인 회사(customer_id)에 할당된 프로젝트만 조회
+      // 고객(CUSTOMER) 권한인 경우: 본인 회사(customer_id)에 할당된 활성 프로젝트만 조회
       if (profile.role === 'CUSTOMER' && profile.customer_id) {
+        // 소속된 고객사의 활성화 여부 확인
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('is_active')
+          .eq('id', profile.customer_id)
+          .single()
+        
+        // 고객사가 비활성화된 경우 프로젝트 조회 안됨
+        if (!customer?.is_active) return []
+
         const { data: projects } = await supabase
           .from('projects')
           .select('*')
           .eq('customer_id', profile.customer_id)
+          .eq('is_active', true)
           .order('name', { ascending: true })
         return projects || []
       } 
       
-      // ADMIN, STAFF 권한인 경우: 참여 중인(project_members) 프로젝트만 조회
+      // ADMIN, STAFF 권한인 경우: 참여 중인(project_members) 활성 고객사의 활성 프로젝트만 조회
       const { data: memberships } = await supabase
         .from('project_members')
-        .select('project_id')
+        .select(`
+          project_id,
+          project:project_id(
+            id,
+            is_active,
+            customer:customer_id(is_active)
+          )
+        `)
         .eq('user_id', session.userId)
       
       if (!memberships || memberships.length === 0) return []
-      const projectIds = memberships.map(m => m.project_id)
+      
+      // 프로젝트가 활성 상태이고, (고객사가 없거나 활성 고객사인 경우)에만 포함
+      const projectIds = memberships
+        .filter((m: any) => m.project?.is_active && (!m.project?.customer || m.project?.customer?.is_active))
+        .map((m: any) => m.project_id)
+
+      if (projectIds.length === 0) return []
+
       const { data: projects } = await supabase
         .from('projects')
         .select('*')
@@ -228,7 +253,7 @@ export default function TicketsPage() {
   return (
     <PageContainer>
       <PageHeader 
-        icon={ClipboardList} 
+        icon={Briefcase} 
         title="접수 리스트" 
         description={profile?.role === 'MASTER' || profile?.role === 'ADMIN' 
           ? '전체 프로젝트의 요청을 실시간으로 관리합니다.' 
@@ -636,7 +661,7 @@ export default function TicketsPage() {
                   <TableCell colSpan={7} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
-                        <ClipboardList className="h-8 w-8 text-zinc-200" />
+                        <Briefcase className="h-8 w-8 text-zinc-200" />
                       </div>
                       <h3 className="text-lg font-black text-zinc-900 tracking-tighter">조회 가능한 티켓이 없습니다</h3>
                       <p className="text-zinc-400 text-sm font-medium mt-1">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>

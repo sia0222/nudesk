@@ -34,10 +34,11 @@ import { Database } from '@/types/supabase'
 const supabase = createClient<Database>()
 ```
 
-## 3. Auth & Session Management
+## 3. Auth & Session Management (NuDesk Special Note)
 
-- Use **Middleware** to refresh the user's session.
-- Prefer `supabase.auth.getUser()` over `supabase.auth.getSession()` on the server for security (it validates the user with the Supabase API).
+- **WARNING**: In this project, we **DO NOT** use `supabase.auth`.
+- **Session**: Managed via `localStorage` and `src/lib/authHelpers.ts`.
+- **Validation**: User data is fetched directly from `public.profiles` using the session userId.
 
 ## 4. Environment Variables
 

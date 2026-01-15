@@ -89,16 +89,19 @@ export function useUpdateCustomer() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, company_name, tel, attachments, userIds }: any) => {
+    mutationFn: async ({ id, company_name, tel, attachments, userIds, is_active }: any) => {
       // 1. 고객사 정보 업데이트
+      const updateData: any = { company_name, tel }
+      if (typeof is_active === 'boolean') updateData.is_active = is_active
+
       const { error: customerError } = await supabase
         .from('customers')
-        .update({ company_name, tel })
+        .update(updateData)
         .eq('id', id)
 
       if (customerError) throw customerError
 
-      // 2. 기존 첨부파일 삭제 후 재등록
+      // 2. 기존 첨부파일 삭제 후 재등록 (수정 모드일 때만)
       if (attachments) {
         await supabase.from('customer_attachments').delete().eq('customer_id', id)
         
@@ -118,50 +121,52 @@ export function useUpdateCustomer() {
         }
       }
 
-      // 3. 인력 소속 업데이트 (기존 소속 해제 후 새 소속 설정)
-      // 먼저 이 고객사에 소속되어 있던 사람들을 모두 해제
-      await supabase.from('profiles').update({ customer_id: null }).eq('customer_id', id)
-      
-      // 새로 선택된 사람들을 이 고객사에 할당
-      if (userIds && userIds.length > 0) {
-        const { error: userError } = await supabase
-          .from('profiles')
-          .update({ customer_id: id })
-          .in('id', userIds)
+      // 3. 인력 소속 업데이트 (userIds가 전달되었을 때만)
+      if (userIds) {
+        // 먼저 이 고객사에 소속되어 있던 사람들을 모두 해제
+        await supabase.from('profiles').update({ customer_id: null }).eq('customer_id', id)
+        
+        // 새로 선택된 사람들을 이 고객사에 할당
+        if (userIds.length > 0) {
+          const { error: userError } = await supabase
+            .from('profiles')
+            .update({ customer_id: id })
+            .in('id', userIds)
 
-        if (userError) throw userError
+          if (userError) throw userError
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.lists() })
       queryClient.invalidateQueries({ queryKey: ['admin', 'all-users'] })
-      toast.success('고객사 정보가 수정되었습니다.')
+      toast.success('고객사 정보가 처리되었습니다.')
     },
     onError: (error: any) => {
-      toast.error(`수정 실패: ${error.message}`)
+      toast.error(`처리 실패: ${error.message}`)
     }
   })
 }
 
-export function useDeleteCustomer() {
+export function useToggleCustomerStatus() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, is_active }: { id: string, is_active: boolean }) => {
       const { error } = await supabase
         .from('customers')
-        .delete()
+        .update({ is_active })
         .eq('id', id)
 
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.lists() })
-      toast.success('고객사가 삭제되었습니다.')
+      toast.success('고객사 상태가 변경되었습니다.')
     },
     onError: (error: any) => {
-      toast.error(`삭제 실패: ${error.message}`)
+      toast.error(`상태 변경 실패: ${error.message}`)
     }
   })
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from '@/hooks/use-customers'
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useToggleCustomerStatus } from '@/hooks/use-customers'
 import { useAllUsers } from '@/hooks/use-admin'
 import {
   Table,
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { 
   Dialog, 
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Building2, Plus, Search, Edit2, Trash2, FileText, Paperclip, Check } from 'lucide-react'
+import { Loader2, Building2, Plus, Search, Edit2, Trash2, FileText, Paperclip, Check, Power, PowerOff } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { PageContainer } from "@/components/layout/page-container"
@@ -37,7 +38,7 @@ export default function AdminCustomersPage() {
   const { data: allUsers } = useAllUsers()
   const createCustomerMutation = useCreateCustomer()
   const updateCustomerMutation = useUpdateCustomer()
-  const deleteCustomerMutation = useDeleteCustomer()
+  const toggleStatusMutation = useToggleCustomerStatus()
   const supabase = createClient()
   
   const customerIndividuals = allUsers?.filter(u => u.role === 'CUSTOMER') || []
@@ -149,9 +150,10 @@ export default function AdminCustomersPage() {
     }
   }
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`${name} 고객사를 삭제하시겠습니까? 관련 데이터가 모두 삭제될 수 있습니다.`)) {
-      deleteCustomerMutation.mutate(id)
+  const handleToggleStatus = (id: string, name: string, currentStatus: boolean) => {
+    const action = currentStatus ? '비활성화' : '활성화'
+    if (confirm(`${name} 고객사를 ${action}하시겠습니까?`)) {
+      toggleStatusMutation.mutate({ id, is_active: !currentStatus })
     }
   }
 
@@ -336,6 +338,7 @@ export default function AdminCustomersPage() {
             <TableHeader className="bg-zinc-50/50">
               <TableRow className="hover:bg-transparent border-zinc-50">
                 <TableHead className="font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest">회사명</TableHead>
+                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">상태</TableHead>
                 <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">연락처</TableHead>
                 <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">소속 인력</TableHead>
                 <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">관련 서류</TableHead>
@@ -343,10 +346,23 @@ export default function AdminCustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers && customers.length > 0 ? (
+                {customers && customers.length > 0 ? (
                 customers.map((customer) => (
-                  <TableRow key={customer.id} className="hover:bg-zinc-50/50 transition-colors border-zinc-50">
+                  <TableRow key={customer.id} className={cn(
+                    "hover:bg-zinc-50/50 transition-colors border-zinc-50",
+                    !customer.is_active && "opacity-50 grayscale bg-zinc-50/30"
+                  )}>
                     <TableCell className="font-black text-zinc-900 pl-10">{customer.company_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn(
+                        "px-3 py-0.5 rounded-full font-black text-[10px] border-2",
+                        customer.is_active 
+                          ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" 
+                          : "border-zinc-300 text-zinc-400 bg-zinc-100"
+                      )}>
+                        {customer.is_active ? '활성' : '비활성'}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-zinc-500 text-sm font-bold">{customer.tel || '-'}</TableCell>
                     <TableCell>
                       <div className="flex -space-x-2">
@@ -392,19 +408,22 @@ export default function AdminCustomersPage() {
                           className="h-10 px-4 rounded-xl font-black gap-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-all"
                           onClick={() => handleOpenDialog(customer)}
                         >
-                          <Edit2 className="h-4 w-4" />
-                          수정
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-10 px-4 rounded-xl font-black gap-2 text-red-500 hover:bg-red-50 transition-all"
-                          onClick={() => handleDelete(customer.id, customer.company_name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          삭제
-                        </Button>
-                      </div>
+                        <Edit2 className="h-4 w-4" />
+                        수정
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "h-10 px-4 rounded-xl font-black gap-2 transition-all",
+                          customer.is_active ? "text-amber-600 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50"
+                        )}
+                        onClick={() => handleToggleStatus(customer.id, customer.company_name, customer.is_active)}
+                      >
+                        {customer.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                        {customer.is_active ? '비활성화' : '활성화'}
+                      </Button>
+                    </div>
                     </TableCell>
                   </TableRow>
                 ))

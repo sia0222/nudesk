@@ -16,10 +16,6 @@
   - 성공 시 `nudesk_session` 키로 `localStorage`에 세션 정보 저장
 - **출력**: `{ user: sessionData, profile: userProfile }`
 
-### 2. 로그아웃 (`signOut`)
-- **함수 위치**: `src/lib/authHelpers.ts`
-- **동작**: `localStorage`에서 `nudesk_session` 삭제
-
 ---
 
 ## 👥 **인력 관리 API (Admin Users)**
@@ -27,44 +23,44 @@
 
 ### 1. 전체 사용자 목록 조회 (`useAllUsers`)
 - **Hook**: `src/hooks/use-admin.ts`
-- **테이블**: `public.profiles`
-- **필터**: 역할(`role`) 순으로 정렬
+- **조회 내용**: `profiles` 테이블 정보 + 소속 고객사명 (`customer:customers(company_name)`)
 
 ### 2. 신규 인력 등록 (`registerUserAction`)
 - **Action**: `src/app/admin/users/actions.ts`
-- **입력**: 
-  - `username`: 영어/숫자 조합 (벨리데이션: `/^[a-zA-Z0-9]+$/`)
-  - `full_name`: 성함
-  - `role`: ADMIN, STAFF, CUSTOMER
-  - `email`, `phone`: 선택 입력
+- **입력**: `username`, `full_name`, `role`, `email`, `phone`, `customer_id`
 - **비밀번호**: 신규 등록 시 '0000'으로 기본 설정
 
-### 3. 인력 정보 수정 (`updateUserAction`)
-- **Action**: `src/app/admin/users/actions.ts`
-- **입력**: `id`, `formData` (username, full_name, role, email, phone)
+---
 
-### 4. 비밀번호 초기화 (`resetPasswordAction`)
-- **Action**: `src/app/admin/users/actions.ts`
-- **동작**: 특정 사용자의 비밀번호를 '0000'으로 초기화
+## 🏢 **고객사 관리 API (Customers)**
+고객사 및 관련 서류 관리 API입니다.
+
+### 1. 고객사 목록 조회 (`useCustomers`)
+- **Hook**: `src/hooks/use-customers.ts`
+- **조회 내용**: 고객사 정보, 첨부 서류 목록, 소속 인력(Profiles) 목록
+
+### 2. 고객사 등록/수정/상태변경 (`useCreateCustomer`, `useUpdateCustomer`, `useToggleCustomerStatus`)
+- **Hook**: `src/hooks/use-customers.ts`
+- **주요 동작**: 
+  - 등록/수정: 고객사 정보 저장, 다중 파일 업로드(Supabase Storage: `customers` 버킷), 소속 인력 배정(`customer_id` 업데이트)
+  - 상태변경: `is_active` 필드 토글 (비활성화 시 프로젝트 노출 및 접수 제한)
 
 ---
 
 ## 📂 **프로젝트 관리 API (Projects)**
-프로젝트 및 멤버 배정 API입니다.
+프로젝트 관리 API입니다.
 
 ### 1. 프로젝트 목록 조회 (`useProjects`)
 - **Hook**: `src/hooks/use-projects.ts`
-- **조회 내용**: 프로젝트 기본 정보 및 참여 멤버 수 (`members:project_members(count)`)
+- **조회 내용**: 프로젝트 정보 + 고객사 정보 (`customer:customers(company_name)`)
 
-### 2. 프로젝트 생성 (`useCreateProject`)
+### 2. 프로젝트 생성/수정/상태변경 (`useCreateProject`, `useUpdateProject`, `useToggleProjectStatus`)
 - **Hook**: `src/hooks/use-projects.ts`
-- **동작**: 
-  1. `projects` 테이블에 기본 정보 저장
-  2. `memberIds` 배열을 순회하며 `project_members` 테이블에 멤버 배정
-
-### 3. 프로젝트 수정 (`useUpdateProject`)
-- **Hook**: `src/hooks/use-projects.ts`
-- **동작**: 기본 정보 수정 후 기존 멤버 전체 삭제 및 새 멤버 재배정
+- **입력**: `name`, `project_type`, `start_date`, `end_date`, `customer_id`, `memberIds`, `is_active`
+- **주요 동작**: 
+  - 생성/수정: 프로젝트 정보 및 인력 배치 업데이트
+  - 상태변경: `is_active` 필드 토글 (비활성화 시 접수 선택 제한)
+- **참고**: `description` 필드는 사용되지 않습니다.
 
 ---
 
@@ -73,21 +69,15 @@
 
 ### 1. 티켓 목록 조회 (`useTickets`)
 - **Hook**: `src/hooks/use-tickets.ts`
-- **권한 제약**: 현재 사용자가 참여 중인 프로젝트의 티켓만 조회 가능
-- **조회 내용**: 티켓 정보, 신청자 정보, 프로젝트명, 다중 담당자 목록
+- **필터링**: 
+  - `CUSTOMER`: 본인 소속 고객사(`customer_id`)의 티켓만 조회
+  - `ADMIN/STAFF`: 본인이 참여 중인 프로젝트의 티켓 조회
+  - `MASTER`: 전체 티켓 조회 가능
 
 ### 2. 새 티켓 등록 (`useCreateTicket`)
 - **Hook**: `src/hooks/use-tickets.ts`
-- **입력**: 
-  - `project_id`, `category`, `receipt_type`, `title`, `description`
-  - `assigned_to_ids`: 다중 담당자 ID 배열
-  - `end_date`: 종료 예정일 (영업일 벨리데이션 포함)
-  - `is_emergency`, `emergency_reason`, `file_urls`
-- **동작**: 티켓 생성 후 `ticket_assignees` 테이블에 담당자 정보 배정
-
-### 3. 티켓 수락 (`useAcceptTicket`)
-- **Hook**: `src/hooks/use-tickets.ts`
-- **동작**: 상태를 `ACCEPTED`로 변경, 마감 기한 설정, 수락한 사용자를 담당자로 배정
+- **동작**: 티켓 생성 시 요청자의 `customer_id` 자동 할당 및 `ticket_assignees` 배정
+- **참고**: `category` 필드는 제거되었습니다.
 
 ---
 
@@ -96,24 +86,29 @@
 ### `public.profiles`
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| id | UUID | 기본키 |
-| username | TEXT | 사용자 ID (유니크) |
-| password | TEXT | 비밀번호 (0000 등) |
-| full_name | TEXT | 사용자 이름 |
+| customer_id | UUID | 소속 고객사 FK (CUSTOMER 역할 필수) |
 | role | user_role | MASTER, ADMIN, STAFF, CUSTOMER |
-| is_approved| BOOLEAN| 승인 여부 (기본 TRUE) |
+
+### `public.customers`
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| company_name | TEXT | 회사명 |
+| tel | TEXT | 연락처 |
+| is_active | BOOLEAN | 활성화 여부 (비활성 시 접수 및 선택 제한) |
+
+### `public.projects`
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| customer_id | UUID | 담당 고객사 FK |
+| start_date/end_date | DATE | 프로젝트 기간 |
+| is_active | BOOLEAN | 활성화 여부 (비활성 시 접수 선택 제한) |
 
 ### `public.tickets`
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| id | UUID | 기본키 |
-| title | TEXT | 티켓 제목 |
-| status | ticket_status | WAITING, ACCEPTED, IN_PROGRESS, COMPLETED |
-| category | TEXT | 접수 카테고리 |
-| project_id | UUID | 소속 프로젝트 외래키 |
-| requester_id| UUID | 신청자 외래키 |
-| file_urls | TEXT[] | 다중 첨부 파일 경로 배열 |
-| is_emergency| BOOLEAN| 긴급 여부 |
+| customer_id | UUID | 고객사 FK (자동 할당) |
+| status | ticket_status | WAITING, ACCEPTED, IN_PROGRESS, DELAYED, COMPLETED |
+| is_emergency | BOOLEAN | 긴급 여부 |
 
 ---
 *본 명세서는 프로젝트 개발 진행에 따라 수시로 업데이트됩니다.*

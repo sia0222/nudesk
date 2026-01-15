@@ -97,11 +97,14 @@ export function useUpdateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, name, project_type, start_date, end_date, memberIds, customer_id }: { id: string, name: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[], customer_id?: string | null }) => {
+    mutationFn: async ({ id, name, project_type, start_date, end_date, memberIds, customer_id, is_active }: { id: string, name: string, project_type: '개발' | '유지', start_date: string, end_date: string, memberIds: string[], customer_id?: string | null, is_active?: boolean }) => {
       // 1. 프로젝트 기본 정보 업데이트
+      const updateData: any = { name, project_type, start_date: start_date || null, end_date: end_date || null, customer_id }
+      if (typeof is_active === 'boolean') updateData.is_active = is_active
+
       const { error: projectError } = await supabase
         .from('projects')
-        .update({ name, project_type, start_date: start_date || null, end_date: end_date || null, customer_id })
+        .update(updateData)
         .eq('id', id)
 
       if (projectError) throw projectError
@@ -179,5 +182,28 @@ export function useRemoveProjectMember() {
       queryClient.invalidateQueries({ queryKey: [...projectKeys.detail(variables.projectId), 'members'] })
       toast.success('멤버가 제외되었습니다.')
     },
+  })
+}
+
+export function useToggleProjectStatus() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, is_active }: { id: string, is_active: boolean }) => {
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_active })
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() })
+      toast.success('프로젝트 상태가 변경되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`상태 변경 실패: ${error.message}`)
+    }
   })
 }

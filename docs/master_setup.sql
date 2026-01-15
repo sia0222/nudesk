@@ -17,10 +17,12 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- 3. 기존 테이블 삭제
 DROP TABLE IF EXISTS public.chats CASCADE;
 DROP TABLE IF EXISTS public.delay_requests CASCADE;
-DROP TABLE IF EXISTS public.ticket_assignees CASCADE; -- 추가
+DROP TABLE IF EXISTS public.ticket_assignees CASCADE;
 DROP TABLE IF EXISTS public.tickets CASCADE;
 DROP TABLE IF EXISTS public.project_members CASCADE;
 DROP TABLE IF EXISTS public.projects CASCADE;
+DROP TABLE IF EXISTS public.customer_attachments CASCADE;
+DROP TABLE IF EXISTS public.customers CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS ticket_status CASCADE;
@@ -37,6 +39,23 @@ CREATE TYPE project_type AS ENUM ('개발', '유지');
 CREATE TYPE receipt_type AS ENUM ('온라인', '전화', '팩스', '이메일'); -- 추가
 
 -- 5. 테이블 생성 (Supabase Auth 제거)
+CREATE TABLE public.customers (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    company_name TEXT NOT NULL,
+    tel TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE public.customer_attachments (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    customer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,
+    file_name TEXT NOT NULL,
+    file_url TEXT NOT NULL,
+    file_type TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE public.profiles (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
@@ -46,6 +65,7 @@ CREATE TABLE public.profiles (
     phone TEXT,           -- 추가: 연락처
     role user_role NOT NULL DEFAULT 'CUSTOMER',
     is_approved BOOLEAN NOT NULL DEFAULT TRUE,
+    customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -56,7 +76,8 @@ CREATE TABLE public.projects (
     start_date DATE,
     end_date DATE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL
+    customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE public.project_members (
