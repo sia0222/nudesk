@@ -10,7 +10,7 @@
 ### **2. UI/UX 표준화 (shadcn/ui 기반)**
 - **공통 레이아웃**: 모든 페이지는 `PageContainer`와 `PageHeader`를 사용합니다.
 - **다이얼로그 표준**: 모든 Dialog는 `max-h-[90vh]`와 `ScrollArea`를 적용하여 내용이 많을 경우 내부 스크롤이 생기도록 합니다. (Header/Footer 고정)
-- **목록 비어있음 (Empty State)**: 관련 아이콘, `text-lg font-black` 제목, `text-[#9CA3AF] text-sm` 설명문을 포함한 센터 정렬 디자인을 사용합니다.
+- **목록 비어있음 (Empty State)**: 관련 아이콘, `text-lg font-black` 제목, `text-[#9CA3AF] text-sm font-black` 설명문을 포함한 센터 정렬 디자인을 사용합니다.
 - **아이콘 통일**: 모든 등록/생성 버튼은 `Plus` 아이콘을 사용합니다. 사이드바와 페이지 헤더의 아이콘은 동일하게 유지합니다.
 - **테이블 스타일 (공통 규격)**:
     - **여백**: `py-6` (수직), `pl-10` (첫 컬럼), `pr-10` (마지막 컬럼).

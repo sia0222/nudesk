@@ -357,8 +357,8 @@ export default function AdminUsersPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                         <Users className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <h3 className="text-lg font-normal text-zinc-900 tracking-tighter">등록된 인력이 없습니다</h3>
-                      <p className="text-[#9CA3AF] text-sm font-normal mt-1">시스템을 이용할 관리자나 직원을 등록해 주세요.</p>
+                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">등록된 인력이 없습니다</h3>
+                      <p className="text-[#9CA3AF] text-sm font-black mt-1">시스템을 이용할 관리자나 직원을 등록해 주세요.</p>
                     </div>
                   </TableCell>
                 </TableRow>

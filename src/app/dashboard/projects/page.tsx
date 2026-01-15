@@ -621,8 +621,8 @@ export default function ProjectsPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                         <LayoutGrid className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <h3 className="text-lg font-normal text-zinc-900 tracking-tighter">진행 중인 프로젝트가 없습니다</h3>
-                        <p className="text-[#9CA3AF] text-sm font-normal mt-1">첫 번째 프로젝트를 생성하여 협업을 시작하세요.</p>
+                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">진행 중인 프로젝트가 없습니다</h3>
+                        <p className="text-[#9CA3AF] text-sm font-black mt-1">첫 번째 프로젝트를 생성하여 협업을 시작하세요.</p>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -669,8 +669,8 @@ export default function TicketsPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                         <Briefcase className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <h3 className="text-lg font-normal text-zinc-900 tracking-tighter">조회 가능한 티켓이 없습니다</h3>
-                      <p className="text-[#9CA3AF] text-sm font-normal mt-1">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>
+                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">조회 가능한 티켓이 없습니다</h3>
+                      <p className="text-[#9CA3AF] text-sm font-black mt-1">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>
                     </div>
                   </TableCell>
                 </TableRow>
