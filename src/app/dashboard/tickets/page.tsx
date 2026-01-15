@@ -82,16 +82,36 @@ export default function TicketsPage() {
   })
 
   const { data: myProjects } = useQuery({
-    queryKey: ['my-projects', session?.userId],
+    queryKey: ['my-projects', session?.userId, profile?.role, profile?.customer_id],
     queryFn: async () => {
-      if (!session) return []
-      const { data: memberships } = await supabase.from('project_members').select('project_id').eq('user_id', session.userId)
+      if (!session || !profile) return []
+      
+      // 고객(CUSTOMER) 권한인 경우: 본인 회사(customer_id)에 할당된 프로젝트만 조회
+      if (profile.role === 'CUSTOMER' && profile.customer_id) {
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('customer_id', profile.customer_id)
+          .order('name', { ascending: true })
+        return projects || []
+      } 
+      
+      // ADMIN, STAFF 권한인 경우: 참여 중인(project_members) 프로젝트만 조회
+      const { data: memberships } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', session.userId)
+      
       if (!memberships || memberships.length === 0) return []
       const projectIds = memberships.map(m => m.project_id)
-      const { data: projects } = await supabase.from('projects').select('*').in('id', projectIds)
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('*')
+        .in('id', projectIds)
+        .order('name', { ascending: true })
       return projects || []
     },
-    enabled: !!session
+    enabled: !!session && !!profile
   })
 
   const { data: projectStaffs } = useQuery({
@@ -109,6 +129,13 @@ export default function TicketsPage() {
 
   const { data: tickets, isLoading: isTicketsLoading, error } = useTickets()
   const createTicketMutation = useCreateTicket()
+
+  // 소속 프로젝트가 1개일 때 자동 지정 로직
+  useEffect(() => {
+    if (myProjects && myProjects.length === 1 && !formData.project_id) {
+      setFormData(prev => ({ ...prev, project_id: myProjects[0].id }));
+    }
+  }, [myProjects, formData.project_id]);
 
   const toggleStaff = (userId: string) => {
     setFormData(prev => ({
@@ -151,9 +178,12 @@ export default function TicketsPage() {
     if (!formData.title.trim()) {
       newErrors.title = '업무 제목을 입력해주세요.';
     }
-    if (formData.assigned_to_ids.length === 0) {
+    
+    // ADMIN, STAFF일 때만 내부 인력 배치 필수 검사
+    if (profile?.role !== 'CUSTOMER' && formData.assigned_to_ids.length === 0) {
       newErrors.assigned_to_ids = '내부 인력을 최소 1명 이상 배치해주세요.';
     }
+
     if (!formData.end_date) {
       newErrors.end_date = '종료 일자를 선택해주세요.';
     } else {
@@ -205,146 +235,156 @@ export default function TicketsPage() {
           : '소속 프로젝트의 요청 사항을 확인하고 관리합니다.'}
         iconClassName="bg-blue-600 shadow-blue-100"
       >
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
-              {profile?.role === 'CUSTOMER' ? <ClipboardList className="h-5 w-5" /> : <PlusCircle className="h-5 w-5" />}
-              {profile?.role === 'CUSTOMER' ? '업무 접수하기' : '새 티켓 등록'}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[750px] h-[90vh] overflow-hidden flex flex-col rounded-[2.5rem] p-0 border-none shadow-2xl">
-            <DialogHeader className="p-10 pb-5 flex-none">
-              <DialogTitle className="text-3xl font-black tracking-tighter">
-                {profile?.role === 'CUSTOMER' ? '업무 접수' : '새 티켓 등록'}
-              </DialogTitle>
-              <DialogDescription className="font-bold text-zinc-400">
-                상세 정보를 입력하여 업무를 접수해 주세요.
-              </DialogDescription>
-            </DialogHeader>
+        {profile?.role !== 'MASTER' && (profile?.role !== 'CUSTOMER' || (profile?.customer_id && myProjects && myProjects.length > 0)) && (
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
+                {profile?.role === 'CUSTOMER' ? <ClipboardList className="h-5 w-5" /> : <PlusCircle className="h-5 w-5" />}
+                {profile?.role === 'CUSTOMER' ? '업무 접수하기' : '새 티켓 등록'}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col rounded-[2.5rem] p-0 border-none shadow-2xl">
+              <DialogHeader className="p-10 pb-5 flex-none">
+                <DialogTitle className="text-3xl font-black tracking-tighter">
+                  {profile?.role === 'CUSTOMER' ? '업무 접수' : '새 티켓 등록'}
+                </DialogTitle>
+                <DialogDescription className="font-bold text-zinc-400">
+                  상세 정보를 입력하여 업무를 접수해 주세요.
+                </DialogDescription>
+              </DialogHeader>
 
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="px-10">
-                  <form id="ticket-form" onSubmit={handleCreateTicket} className="space-y-8 pb-10">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="grid gap-2 col-span-2">
-                        <Label className="text-sm font-black text-zinc-700 ml-1">프로젝트</Label>
-                        <Select 
-                          onValueChange={(v) => handleInputChange('project_id', v)} 
-                          value={formData.project_id}
-                          required
-                        >
-                          <SelectTrigger className={cn(
-                            "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
-                            errors.project_id && "border-red-500 bg-red-50/30"
-                          )}>
-                            <SelectValue placeholder="프로젝트를 선택하세요" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
-                            {myProjects?.map(p => <SelectItem key={p.id} value={p.id} className="font-bold py-3">{p.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        {errors.project_id && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
-                      </div>
-
-                      <div className="grid gap-2 col-span-2">
-                        <Label className="text-sm font-black text-zinc-700 ml-1">접수유형</Label>
-                        <div className="flex gap-2 p-1 bg-zinc-100 rounded-2xl">
-                          {['온라인', '전화', '팩스', '이메일'].map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => setFormData(prev => ({...prev, receipt_type: type as any}))}
-                              className={cn(
-                                "flex-1 h-12 rounded-xl text-sm font-black transition-all",
-                                formData.receipt_type === type 
-                                  ? "bg-white text-zinc-900 shadow-sm" 
-                                  : "text-zinc-400 hover:text-zinc-600"
-                              )}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="px-10">
+                    <form id="ticket-form" onSubmit={handleCreateTicket} className="space-y-8 pb-10">
+                      <div className="grid grid-cols-2 gap-6">
+                        {/* 프로젝트 선택: 고객사이고 프로젝트가 1개인 경우 숨김 */}
+                        {!(profile?.role === 'CUSTOMER' && myProjects?.length === 1) && (
+                          <div className="grid gap-2 col-span-2">
+                            <Label className="text-sm font-black text-zinc-700 ml-1">프로젝트</Label>
+                            <Select 
+                              onValueChange={(v) => handleInputChange('project_id', v)} 
+                              value={formData.project_id}
+                              required
                             >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid gap-2 col-span-2">
-                        <Label className="text-sm font-black text-zinc-700 ml-1">제목</Label>
-                        <Input 
-                          placeholder="업무 제목을 입력하세요" 
-                          className={cn(
-                            "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
-                            errors.title && "border-red-500 bg-red-50/30"
-                          )}
-                          value={formData.title}
-                          onChange={e => handleInputChange('title', e.target.value)}
-                          required
-                        />
-                        {errors.title && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.title}</p>}
-                      </div>
-
-                      <div className="grid gap-2 col-span-2">
-                        <Label className="text-sm font-black text-zinc-700 ml-1">설명</Label>
-                        <Textarea
-                          placeholder="상세 내용을 입력하세요 (선택 사항)"
-                          className="min-h-[140px] rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 py-4 font-medium"
-                          value={formData.description}
-                          onChange={e => handleInputChange('description', e.target.value)}
-                        />
-                      </div>
-
-                      <div className="grid gap-2 col-span-2">
-                        <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
-                          내부 인력 배치
-                          <span className="text-[10px] text-zinc-400 font-bold uppercase italic">{formData.assigned_to_ids.length}명 선택됨</span>
-                        </Label>
-                        <div className={cn(
-                          "bg-zinc-50 rounded-[1.5rem] p-4 border transition-all min-h-[120px]",
-                          errors.assigned_to_ids ? "border-red-500 bg-red-50/30" : "border-zinc-100"
-                        )}>
-                          <div className="grid grid-cols-2 gap-3">
-                            {projectStaffs?.map((staff: any) => (
-                              <div
-                                key={staff.id}
-                                onClick={() => {
-                                  toggleStaff(staff.id);
-                                  if (errors.assigned_to_ids) setErrors(prev => {
-                                    const next = {...prev};
-                                    delete next.assigned_to_ids;
-                                    return next;
-                                  });
-                                }}
-                                className={cn(
-                                  "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group",
-                                  formData.assigned_to_ids.includes(staff.id)
-                                    ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
-                                    : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
-                                )}
-                              >
-                                <div className={cn(
-                                  "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic",
-                                  formData.assigned_to_ids.includes(staff.id) ? "bg-zinc-800" : "bg-zinc-100 text-zinc-400"
-                                )}>
-                                  {staff.role[0]}
-                                </div>
-                                <div className="flex-1 overflow-hidden">
-                                  <p className="text-xs font-black truncate">{staff.full_name}</p>
-                                  <p className={cn("text-[10px] font-bold opacity-60", formData.assigned_to_ids.includes(staff.id) ? "text-white" : "text-zinc-400")}>{staff.role}</p>
-                                </div>
-                                {formData.assigned_to_ids.includes(staff.id) && <Check className="h-4 w-4" />}
-                              </div>
-                            ))}
-                            {projectStaffs?.length === 0 && (
-                              <div className="col-span-2 py-8 text-center text-zinc-400 text-xs font-bold italic">
-                                프로젝트를 먼저 선택해 주세요.
-                              </div>
-                            )}
+                              <SelectTrigger className={cn(
+                                "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
+                                errors.project_id && "border-red-500 bg-red-50/30"
+                              )}>
+                                <SelectValue placeholder="프로젝트를 선택하세요" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
+                                {myProjects?.map(p => <SelectItem key={p.id} value={p.id} className="font-bold py-3">{p.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            {errors.project_id && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
                           </div>
-                        </div>
-                        {errors.assigned_to_ids && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.assigned_to_ids}</p>}
-                      </div>
+                        )}
 
-                      <div className="grid gap-2 col-span-2">
+                        {/* 접수 유형: 고객사인 경우 숨김 (자동으로 '온라인' 저장) */}
+                        {profile?.role !== 'CUSTOMER' && (
+                          <div className="grid gap-2 col-span-2">
+                            <Label className="text-sm font-black text-zinc-700 ml-1">접수유형</Label>
+                            <div className="flex gap-2 p-1 bg-zinc-100 rounded-2xl">
+                              {['온라인', '전화', '팩스', '이메일'].map((type) => (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({...prev, receipt_type: type as any}))}
+                                  className={cn(
+                                    "flex-1 h-12 rounded-xl text-sm font-black transition-all",
+                                    formData.receipt_type === type 
+                                      ? "bg-white text-zinc-900 shadow-sm" 
+                                      : "text-zinc-400 hover:text-zinc-600"
+                                  )}
+                                >
+                                  {type}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid gap-2 col-span-2">
+                          <Label className="text-sm font-black text-zinc-700 ml-1">제목</Label>
+                          <Input 
+                            placeholder="업무 제목을 입력하세요" 
+                            className={cn(
+                              "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
+                              errors.title && "border-red-500 bg-red-50/30"
+                            )}
+                            value={formData.title}
+                            onChange={e => handleInputChange('title', e.target.value)}
+                            required
+                          />
+                          {errors.title && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.title}</p>}
+                        </div>
+
+                        <div className="grid gap-2 col-span-2">
+                          <Label className="text-sm font-black text-zinc-700 ml-1">내용</Label>
+                          <Textarea
+                            placeholder="상세 내용을 입력하세요"
+                            className="min-h-[140px] rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 py-4 font-medium"
+                            value={formData.description}
+                            onChange={e => handleInputChange('description', e.target.value)}
+                          />
+                        </div>
+
+                        {/* 내부 인력 배치: 고객사인 경우 숨김 */}
+                        {profile?.role !== 'CUSTOMER' && (
+                          <div className="grid gap-2 col-span-2">
+                            <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
+                              내부 인력 배치
+                              <span className="text-[10px] text-zinc-400 font-bold uppercase italic">{formData.assigned_to_ids.length}명 선택됨</span>
+                            </Label>
+                            <div className={cn(
+                              "bg-zinc-50 rounded-[1.5rem] p-4 border transition-all min-h-[120px]",
+                              errors.assigned_to_ids ? "border-red-500 bg-red-50/30" : "border-zinc-100"
+                            )}>
+                              <div className="grid grid-cols-2 gap-3">
+                                {projectStaffs?.map((staff: any) => (
+                                  <div
+                                    key={staff.id}
+                                    onClick={() => {
+                                      toggleStaff(staff.id);
+                                      if (errors.assigned_to_ids) setErrors(prev => {
+                                        const next = {...prev};
+                                        delete next.assigned_to_ids;
+                                        return next;
+                                      });
+                                    }}
+                                    className={cn(
+                                      "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group",
+                                      formData.assigned_to_ids.includes(staff.id)
+                                        ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
+                                        : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
+                                    )}
+                                  >
+                                    <div className={cn(
+                                      "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic",
+                                      formData.assigned_to_ids.includes(staff.id) ? "bg-zinc-800" : "bg-zinc-100 text-zinc-400"
+                                    )}>
+                                      {staff.role[0]}
+                                    </div>
+                                    <div className="flex-1 overflow-hidden">
+                                      <p className="text-xs font-black truncate">{staff.full_name}</p>
+                                      <p className={cn("text-[10px] font-bold opacity-60", formData.assigned_to_ids.includes(staff.id) ? "text-white" : "text-zinc-400")}>{staff.role}</p>
+                                    </div>
+                                    {formData.assigned_to_ids.includes(staff.id) && <Check className="h-4 w-4" />}
+                                  </div>
+                                ))}
+                                {(!projectStaffs || projectStaffs.length === 0) && (
+                                  <div className="col-span-2 py-8 text-center text-zinc-400 text-xs font-bold italic">
+                                    프로젝트를 먼저 선택해 주세요.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {errors.assigned_to_ids && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.assigned_to_ids}</p>}
+                          </div>
+                        )}
+
+                        <div className="grid gap-2 col-span-2">
                         <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                           종료 일자
                           <span className={cn("text-[10px] font-bold italic", formData.is_emergency ? "text-red-600" : "text-blue-600")}>
@@ -506,7 +546,8 @@ export default function TicketsPage() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        )}
       </PageHeader>
 
        <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white">
