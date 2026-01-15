@@ -28,7 +28,10 @@
 *   **`ACCEPTED` → `IN_PROGRESS`**: 상세 페이지 우측 영역에서 운영진이 **[전송 및 업무 시작]** 버튼을 눌러 메시지를 발송하면 변경됩니다. (이때 확정 종료일자와 인력 배치가 최종 저장됩니다.)
 
 ### **2.3. 지연 및 완료 단계**
-*   **`IN_PROGRESS` → `DELAYED`**: 시스템 날짜가 **확정 종료일자(`confirmed_end_date`)**를 초과하면 자동으로 판단됩니다. (목록의 D+ 표시 기준)
+*   **자동 지연 처리 (Auto-Delay)**:
+    *   상태가 **`WAITING`** 또는 **`ACCEPTED`**인 티켓의 **`initial_end_date`**가 현재 날짜(`today`)와 같거나 이미 지난 경우, 시스템은 실시간으로 상태를 **`DELAYED`**로 간주합니다.
+    *   이때 **`confirmed_end_date`**가 비어있다면 **`initial_end_date`**의 날짜로 자동 동기화하여 표시합니다.
+*   **`IN_PROGRESS` → `DELAYED`**: **`confirmed_end_date`**를 초과하면 지연으로 판단됩니다.
 *   **`ANY` → `COMPLETED`**: 업무 완료 처리 시 최종적으로 도달합니다. 완료 상태에서는 댓글 작성이 비활성화됩니다.
 
 ---

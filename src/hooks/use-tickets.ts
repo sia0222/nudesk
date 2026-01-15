@@ -2,6 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/utils/supabase/client'
 import { toast } from 'sonner'
 import { getCurrentSession } from '@/lib/authHelpers'
+import { startOfDay } from 'date-fns'
+
+// 티켓의 상태와 날짜를 실시간으로 체크하여 자동 지연 처리를 수행하는 헬퍼 함수
+const processTicketStatus = (ticket: any) => {
+  if (!ticket) return ticket;
+
+  const today = startOfDay(new Date());
+  // initial_end_date를 기준으로 지연 여부 판단
+  const initialDate = ticket.initial_end_date ? startOfDay(new Date(ticket.initial_end_date)) : null;
+
+  // 규칙: [대기] 또는 [접수] 상태인데 종료일자가 오늘이거나 지난 경우
+  if (initialDate && (ticket.status === 'WAITING' || ticket.status === 'ACCEPTED')) {
+    if (initialDate <= today) {
+      return {
+        ...ticket,
+        status: 'DELAYED',
+        // 확정 종료일자가 없으면 종료일자로 동기화하여 표시
+        confirmed_end_date: ticket.confirmed_end_date || ticket.initial_end_date
+      };
+    }
+  }
+  return ticket;
+};
 
 export const ticketKeys = {
   all: ['tickets'] as const,
@@ -69,7 +92,9 @@ export function useTickets(filters?: any) {
 
       const { data, error } = await query
       if (error) throw error
-      return data
+      
+      // 모든 티켓에 대해 자동 지연 로직 적용
+      return data.map(processTicketStatus)
     },
   })
 }
@@ -165,7 +190,8 @@ export function useTicket(id: string) {
         )
       }
       
-      return data
+      // 단일 티켓에 자동 지연 로직 적용
+      return processTicketStatus(data)
     },
     enabled: !!id,
   })

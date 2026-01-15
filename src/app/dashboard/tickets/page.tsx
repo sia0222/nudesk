@@ -618,7 +618,8 @@ export default function TicketsPage() {
            <TableBody>
              {tickets && tickets.length > 0 ? (
                tickets.map((ticket: any) => {
-                 const targetDate = ticket.end_date || ticket.deadline;
+                 // 지연 로직이 적용된 confirmed_end_date를 우선 사용, 없으면 initial_end_date 사용
+                 const targetDate = ticket.confirmed_end_date || ticket.initial_end_date;
                  const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
                  
                  return (
