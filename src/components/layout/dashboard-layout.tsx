@@ -90,19 +90,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-1">
-            {filteredNavItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <span className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black transition-all",
-                  pathname === item.href 
-                    ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200" 
-                    : "text-[#9CA3AF] hover:bg-zinc-100 hover:text-zinc-900"
-                )}>
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </span>
-              </Link>
-            ))}
+            {filteredNavItems.map((item) => {
+              const isActive = pathname === item.href || (item.href === '/dashboard/tickets' && pathname.startsWith('/dashboard/tickets/'))
+              
+              return (
+                <Link key={item.href} href={item.href}>
+                  <span className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black transition-all",
+                    isActive 
+                      ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200" 
+                      : "text-[#9CA3AF] hover:bg-zinc-100 hover:text-zinc-900"
+                  )}>
+                    <item.icon className="h-5 w-5" />
+                    {item.name}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
 
           <Separator className="my-8 bg-zinc-50" />
@@ -129,16 +133,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 border-t bg-zinc-50/50">
           <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border shadow-sm">
             <div className={cn(
-              "h-10 w-10 rounded-xl text-white flex items-center justify-center text-xs font-black italic",
-              profile?.role === 'CUSTOMER' ? "bg-[#D98ADA]" : "bg-[#242F67]"
+              "h-10 w-10 rounded-xl text-white flex items-center justify-center text-xs font-black italic shadow-sm",
+              profile?.role === 'MASTER' ? "bg-[#242F67]" :
+              profile?.role === 'ADMIN' ? "bg-[#82B326]" :
+              profile?.role === 'STAFF' ? "bg-[#F6AD55]" :
+              profile?.role === 'CUSTOMER' ? "bg-[#D98ADA]" :
+              "bg-zinc-200"
             )}>
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (profile?.role?.[0] || '?')}
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-base font-black text-zinc-900">{profile?.full_name || '로그인 필요'}</p>
               <p className={cn(
-                "truncate text-xs font-bold uppercase tracking-widest",
-                profile?.role === 'CUSTOMER' ? "text-[#D98ADA]" : "text-[#242F67]"
+                "truncate text-[10px] font-black uppercase tracking-widest",
+                profile?.role === 'MASTER' ? "text-[#242F67]" :
+                profile?.role === 'ADMIN' ? "text-[#82B326]" :
+                profile?.role === 'STAFF' ? "text-[#F6AD55]" :
+                profile?.role === 'CUSTOMER' ? "text-[#D98ADA]" :
+                "text-[#9CA3AF]"
               )}>
                 {profile?.role || '---'}
               </p>

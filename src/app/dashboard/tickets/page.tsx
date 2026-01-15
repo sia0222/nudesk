@@ -285,7 +285,7 @@ export default function TicketsPage() {
         description={profile?.role === 'MASTER' || profile?.role === 'ADMIN' 
           ? '전체 프로젝트의 요청을 실시간으로 관리합니다.' 
           : '소속 프로젝트의 요청 사항을 확인하고 관리합니다.'}
-        iconClassName="bg-blue-600 shadow-blue-100"
+        iconClassName="bg-zinc-900 shadow-zinc-100"
       >
         {profile?.role !== 'MASTER' && (profile?.role !== 'CUSTOMER' || (profile?.customer_id && myProjects && myProjects.length > 0)) && (
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -628,7 +628,7 @@ export default function TicketsPage() {
                               onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
                               className={cn(
                                 "group transition-all border-zinc-50 cursor-pointer hover:bg-zinc-50/50",
-                                ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
+                                ticket.is_emergency && "bg-red-50/20 hover:bg-red-50/40"
                               )}
                             >
                      <TableCell className="py-6 pl-10 text-center">
@@ -654,8 +654,8 @@ export default function TicketsPage() {
                      </TableCell>
                      <TableCell className="py-6">
                        <div className="flex items-center gap-2">
-                         {ticket.is_urgent && <Zap className="h-4 w-4 text-[#E53E3E] fill-[#E53E3E] animate-pulse" />}
-                         <span className={cn("font-black text-zinc-900 tracking-tight text-base", ticket.is_urgent && "text-[#E53E3E]")}>{ticket.title}</span>
+                         {ticket.is_emergency && <Zap className="h-4 w-4 text-red-600 fill-red-600 animate-pulse" />}
+                         <span className="font-black text-zinc-900 tracking-tight text-base">{ticket.title}</span>
                        </div>
                      </TableCell>
                      <TableCell className="py-6 text-center">
