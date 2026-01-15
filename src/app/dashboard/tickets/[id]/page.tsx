@@ -280,7 +280,21 @@ export default function TicketDetailPage() {
                 <div className="space-y-1">
                   <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">종료일자</p>
                   <p className="text-base font-black text-blue-600 italic">
-                    {ticket.end_date ? format(new Date(ticket.end_date), 'yyyy.MM.dd') : '---'}
+                    {/* 최초 등록 시 날짜(initial_end_date)를 우선 표시하고, 없으면 end_date 표시 */}
+                    {ticket.initial_end_date 
+                      ? format(new Date(ticket.initial_end_date), 'yyyy.MM.dd') 
+                      : ticket.end_date 
+                        ? format(new Date(ticket.end_date), 'yyyy.MM.dd') 
+                        : '---'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">확정 종료일자</p>
+                  <p className="text-base font-black text-red-600 italic">
+                    {/* 최초 종료일과 같더라도 값이 있다면 무조건 날짜 표시 */}
+                    {ticket.confirmed_end_date 
+                      ? format(new Date(ticket.confirmed_end_date), 'yyyy.MM.dd') 
+                      : '---'}
                   </p>
                 </div>
               </div>

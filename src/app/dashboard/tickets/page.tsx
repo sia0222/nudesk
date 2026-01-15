@@ -609,9 +609,9 @@ export default function TicketsPage() {
                <TableHead className="w-[100px] font-black py-6 pl-10 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">상태</TableHead>
                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">프로젝트</TableHead>
                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">제목</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">종료일자</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">잔여일자(D-)</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">등록일</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">잔여일자</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">종료일자</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">확정 종료일자</TableHead>
                <TableHead className="w-[80px] py-6 pr-10 font-black"></TableHead>
              </TableRow>
            </TableHeader>
@@ -657,12 +657,7 @@ export default function TicketsPage() {
                          <span className={cn("font-black text-zinc-900 tracking-tight text-base", ticket.is_urgent && "text-[#E53E3E]")}>{ticket.title}</span>
                        </div>
                      </TableCell>
-                     <TableCell className="py-6">
-                       <div className="flex items-center gap-2 font-black text-[#9CA3AF] text-sm text-center">
-                         {targetDate ? format(new Date(targetDate), "yyyy-MM-dd") : '---'}
-                       </div>
-                     </TableCell>
-                     <TableCell className="py-6">
+                     <TableCell className="py-6 text-center">
                        {ticket.status === 'COMPLETED' ? (
                          <span className="text-[#9CA3AF] font-black text-sm">-</span>
                        ) : dDay !== null ? (
@@ -679,8 +674,20 @@ export default function TicketsPage() {
                        )}
                      </TableCell>
                      <TableCell className="py-6">
-                       <div className="font-black text-[#9CA3AF] text-sm">
-                         {format(new Date(ticket.created_at), "yyyy-MM-dd")}
+                       <div className="flex items-center justify-center font-black text-[#9CA3AF] text-sm text-center">
+                         {/* 리스트에서도 등록 시점의 최초 종료일을 표시 */}
+                         {ticket.initial_end_date 
+                           ? format(new Date(ticket.initial_end_date), "yyyy-MM-dd") 
+                           : ticket.end_date 
+                             ? format(new Date(ticket.end_date), "yyyy-MM-dd") 
+                             : '---'}
+                       </div>
+                     </TableCell>
+                     <TableCell className="py-6">
+                       <div className="flex items-center justify-center font-black text-[#9CA3AF] text-sm text-center">
+                         {ticket.confirmed_end_date 
+                           ? format(new Date(ticket.confirmed_end_date), "yyyy-MM-dd") 
+                           : '---'}
                        </div>
                      </TableCell>
                      <TableCell className="py-6 pr-10 text-right">

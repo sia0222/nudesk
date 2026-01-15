@@ -99,6 +99,8 @@ CREATE TABLE public.tickets (
     requester_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL, -- 호환성 유지
     end_date DATE,
+    initial_end_date DATE, -- 최초 등록 시 종료일 보존
+    confirmed_end_date DATE, -- 운영진이 확정한 최종 종료일
     is_emergency BOOLEAN DEFAULT FALSE,
     emergency_date DATE,
     emergency_reason TEXT,

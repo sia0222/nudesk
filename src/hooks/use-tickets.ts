@@ -99,6 +99,7 @@ export function useCreateTicket() {
           ...ticketData,
           requester_id: session.userId,
           customer_id: profile?.customer_id || null, // 고객사 ID 자동 할당
+          initial_end_date: ticketData.end_date, // 초기 종료일 보존
           status: (formData.assigned_to_ids && formData.assigned_to_ids.length > 0) ? 'ACCEPTED' : 'WAITING'
         }])
         .select()
@@ -236,9 +237,12 @@ export function useAssignStaffAndAccept() {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
-      // 1. 상태를 'ACCEPTED'로 변경 및 종료일자 업데이트
+      // 1. 상태를 'ACCEPTED'로 변경 및 확정 종료일자 업데이트
       const updateData: any = { status: 'ACCEPTED' }
-      if (endDate) updateData.end_date = endDate
+      if (endDate) {
+        updateData.confirmed_end_date = endDate // 확정 종료일자 컬럼에 저장
+        updateData.end_date = endDate // 실제 시스템 종료일도 업데이트
+      }
 
       const { error: ticketError } = await supabase
         .from('tickets')
@@ -293,9 +297,12 @@ export function useStartWork() {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
-      // 1. 상태를 'IN_PROGRESS'로 변경 및 종료일자 업데이트 (전달된 경우)
+      // 1. 상태를 'IN_PROGRESS'로 변경 및 확정 종료일자 업데이트
       const updateData: any = { status: 'IN_PROGRESS' }
-      if (endDate) updateData.end_date = endDate
+      if (endDate) {
+        updateData.confirmed_end_date = endDate // 확정 종료일자 컬럼에 저장
+        updateData.end_date = endDate // 실제 시스템 종료일도 업데이트
+      }
 
       const { error: ticketError } = await supabase
         .from('tickets')
