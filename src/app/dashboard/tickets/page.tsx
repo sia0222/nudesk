@@ -36,25 +36,8 @@ export default function TicketsPage() {
   const [isOpen, setIsOpen] = useState(false)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false) // 달력 팝오버 상태 추가
 
-  // 카테고리 상수 정의
-  const CAT_EMERGENCY = "긴급 / 지금 서비스 이용이 아예 안 돼요!";
-  const CAT_ERROR = "오류 / 기능이 마음대로 작동하지 않아요";
-  const CAT_REPAIR = "수정 / 화면이 깨지거나 이상하게 보여요";
-  const CAT_REQUEST = "요청 / 필요한 자료를 보내주세요";
-  const CAT_ADD = "추가 / 이런 기능이 추가되면 좋겠어요";
-
-  // 카테고리 옵션 정의
-  const categoryOptions = [
-    { label: "🚨 지금 서비스 이용이 아예 안 돼요!", value: CAT_EMERGENCY },
-    { label: "🛠️ 기능이 마음대로 작동하지 않아요", value: CAT_ERROR },
-    { label: "🎨 화면이 깨지거나 이상하게 보여요", value: CAT_REPAIR },
-    { label: "📂 필요한 자료를 보내주세요", value: CAT_REQUEST },
-    { label: "➕ 이런 기능이 추가되면 좋겠어요", value: CAT_ADD },
-  ]
-
   const [formData, setFormData] = useState({
     project_id: '',
-    category: '', 
     receipt_type: '온라인' as '온라인' | '전화' | '팩스' | '이메일',
     title: '',
     description: '',
@@ -78,15 +61,6 @@ export default function TicketsPage() {
       });
     }
   }
-
-  // 카테고리가 긴급일 때 긴급처리요청 강제 활성화 및 해제 방지
-  useEffect(() => {
-    if (formData.category === CAT_EMERGENCY) {
-      if (!formData.is_emergency) {
-        setFormData(prev => ({ ...prev, is_emergency: true }));
-      }
-    }
-  }, [formData.category, formData.is_emergency, CAT_EMERGENCY]);
 
   const dateLimits = useMemo(() => {
     return {
@@ -174,9 +148,6 @@ export default function TicketsPage() {
     if (!formData.project_id) {
       newErrors.project_id = '프로젝트를 선택해주세요.';
     }
-    if (!formData.category) {
-      newErrors.category = '접수 카테고리를 선택해주세요.';
-    }
     if (!formData.title.trim()) {
       newErrors.title = '업무 제목을 입력해주세요.';
     }
@@ -215,7 +186,7 @@ export default function TicketsPage() {
       onSuccess: () => {
         setIsOpen(false)
         setFormData({
-          project_id: '', category: '', receipt_type: '온라인', title: '',
+          project_id: '', receipt_type: '온라인', title: '',
           description: '', assigned_to_ids: [], end_date: undefined, is_emergency: false,
           emergency_reason: '', files: []
         })
@@ -274,42 +245,6 @@ export default function TicketsPage() {
                           </SelectContent>
                         </Select>
                         {errors.project_id && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
-                      </div>
-                      
-                      <div className="grid gap-2 col-span-2">
-                        <Label className="text-sm font-black text-zinc-700 ml-1">접수 카테고리</Label>
-                        <Select 
-                          onValueChange={(v) => {
-                            const isUrgent = (v === CAT_EMERGENCY);
-                            setFormData(prev => ({
-                              ...prev, 
-                              category: v,
-                              is_emergency: isUrgent, 
-                              end_date: isUrgent ? prev.end_date : undefined
-                            }))
-                            if (errors.category) setErrors(prev => {
-                              const next = {...prev};
-                              delete next.category;
-                              return next;
-                            });
-                          }} 
-                          value={formData.category}
-                        >
-                          <SelectTrigger className={cn(
-                            "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-bold text-left",
-                            errors.category && "border-red-500 bg-red-50/30"
-                          )}>
-                            <SelectValue placeholder="카테고리를 선택하세요" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
-                            {categoryOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value} className="font-bold py-3">
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {errors.category && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.category}</p>}
                       </div>
 
                       <div className="grid gap-2 col-span-2">
@@ -471,16 +406,8 @@ export default function TicketsPage() {
                       )}>
                         <div className="flex items-center justify-between">
                           <Label 
-                            className={cn(
-                              "text-sm font-black text-zinc-700 flex items-center gap-2",
-                              formData.category === CAT_EMERGENCY ? "cursor-not-allowed" : "cursor-pointer"
-                            )}
+                            className="text-sm font-black text-zinc-700 flex items-center gap-2 cursor-pointer"
                             onClick={() => {
-                              if (formData.category === CAT_EMERGENCY) {
-                                toast.warning('긴급 카테고리에서는 긴급처리가 필수입니다.');
-                                return;
-                              }
-                              
                               setFormData(prev => {
                                 const nextUrgent = !prev.is_emergency;
                                 return {
@@ -626,14 +553,6 @@ export default function TicketsPage() {
                         <div className="flex items-center gap-2">
                           {ticket.is_urgent && <Zap className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />}
                           <span className={cn("font-black text-zinc-900 tracking-tight", ticket.is_urgent && "text-red-600")}>{ticket.title}</span>
-                          <Badge variant="outline" className="text-[9px] font-black h-4 px-1.5 rounded-md border-zinc-100 bg-white shadow-sm">
-                            {ticket.category === CAT_EMERGENCY ? "🚨 " : 
-                             ticket.category === CAT_ERROR ? "🛠️ " :
-                             ticket.category === CAT_REPAIR ? "🎨 " :
-                             ticket.category === CAT_REQUEST ? "📂 " :
-                             ticket.category === CAT_ADD ? "➕ " : ""}
-                            {ticket.category.includes('/') ? ticket.category.split('/')[1].trim() : ticket.category}
-                          </Badge>
                         </div>
                       </TableCell>
                       <TableCell>

@@ -72,7 +72,6 @@ CREATE TABLE public.tickets (
     title TEXT NOT NULL,
     description TEXT,
     status ticket_status NOT NULL DEFAULT 'WAITING',
-    category TEXT NOT NULL DEFAULT '수정', -- 유연한 카테고리 관리를 위해 TEXT로 변경
     receipt_type receipt_type DEFAULT '온라인',
     priority TEXT DEFAULT '보통',
     project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -136,11 +135,11 @@ FROM public.projects p
 CROSS JOIN public.profiles pr;
 
 -- 9. 샘플 티켓
-INSERT INTO public.tickets (title, description, status, category, project_id, requester_id) VALUES
-('로그인 기능 구현', '사용자 로그인 기능 구현 및 테스트', 'IN_PROGRESS', '🛠️ 오류 / 기능이 마음대로 작동하지 않아요',
+INSERT INTO public.tickets (title, description, status, project_id, requester_id) VALUES
+('로그인 기능 구현', '사용자 로그인 기능 구현 및 테스트', 'IN_PROGRESS',
  (SELECT id FROM public.projects LIMIT 1),
  (SELECT id FROM public.profiles WHERE username = 'customer')),
-('UI 디자인 개선', '대시보드 UI 개선 작업', 'WAITING', '🎨 수정 / 화면이 깨지거나 이상하게 보여요',
+('UI 디자인 개선', '대시보드 UI 개선 작업', 'WAITING',
  (SELECT id FROM public.projects LIMIT 1),
  (SELECT id FROM public.profiles WHERE username = 'customer'));
 
