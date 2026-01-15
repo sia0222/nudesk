@@ -135,6 +135,7 @@ CREATE TABLE public.chats (
     ticket_id UUID REFERENCES public.tickets(id) ON DELETE CASCADE,
     sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     message TEXT NOT NULL,
+    file_urls TEXT[] DEFAULT '{}', -- 다중 파일 지원 추가
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

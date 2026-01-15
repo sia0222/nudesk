@@ -99,7 +99,7 @@ export function useCreateTicket() {
           ...ticketData,
           requester_id: session.userId,
           customer_id: profile?.customer_id || null, // 고객사 ID 자동 할당
-          status: 'WAITING'
+          status: (formData.assigned_to_ids && formData.assigned_to_ids.length > 0) ? 'ACCEPTED' : 'WAITING'
         }])
         .select()
         .single()
@@ -131,37 +131,239 @@ export function useCreateTicket() {
   })
 }
 
-export function useAcceptTicket() {
+export function useTicket(id: string) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ticketKeys.detail(id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          requester:requester_id(full_name, username, customer:customer_id(company_name)),
+          project:project_id(id, name, customer:customer_id(company_name)),
+          assignees:ticket_assignees(user_id, profiles(id, full_name, username, role)),
+          chats:chats(
+            id,
+            message,
+            file_urls,
+            created_at,
+            sender:sender_id(id, full_name, username, role)
+          )
+        `)
+        .eq('id', id)
+        .single()
+
+      if (error) throw error
+      
+      // 채팅(댓글) 시간순 정렬
+      if (data.chats) {
+        data.chats.sort((a: any, b: any) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+      }
+      
+      return data
+    },
+    enabled: !!id,
+  })
+}
+
+export function useAddComment() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ ticketId, deadline }: { ticketId: string, deadline: string }) => {
+    mutationFn: async ({ ticketId, message, file_urls }: { ticketId: string, message: string, file_urls?: string[] }) => {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
+      const { data, error } = await supabase
+        .from('chats')
+        .insert([{
+          ticket_id: ticketId,
+          sender_id: session.userId,
+          message,
+          file_urls: file_urls || []
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      toast.success('댓글이 등록되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`댓글 등록 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useUpdateTicketStatus() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, status }: { ticketId: string, status: string }) => {
       const { error } = await supabase
         .from('tickets')
-        .update({
-          status: 'ACCEPTED',
-          deadline: deadline
-        })
+        .update({ status })
         .eq('id', ticketId)
 
       if (error) throw error
-
-      // 수락한 사람을 담당자로 추가
-      await supabase.from('ticket_assignees').upsert({
-        ticket_id: ticketId,
-        user_id: session.userId
-      })
+      return { ticketId, status }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ticketKeys.all })
-      toast.success('티켓을 수락했습니다.')
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(data.ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() })
     },
     onError: (error: any) => {
-      toast.error(`수락 실패: ${error.message}`)
+      toast.error(`상태 변경 실패: ${error.message}`)
     }
+  })
+}
+
+export function useAssignStaffAndAccept() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, staffIds, message, endDate }: { ticketId: string, staffIds: string[], message: string, endDate?: string }) => {
+      const session = getCurrentSession()
+      if (!session) throw new Error('로그인이 필요합니다.')
+
+      // 1. 상태를 'ACCEPTED'로 변경 및 종료일자 업데이트
+      const updateData: any = { status: 'ACCEPTED' }
+      if (endDate) updateData.end_date = endDate
+
+      const { error: ticketError } = await supabase
+        .from('tickets')
+        .update(updateData)
+        .eq('id', ticketId)
+
+      if (ticketError) throw ticketError
+
+      // 2. 인력 배치 (ticket_assignees)
+      if (staffIds.length > 0) {
+        const assignees = staffIds.map(userId => ({
+          ticket_id: ticketId,
+          user_id: userId
+        }))
+        const { error: assigneeError } = await supabase
+          .from('ticket_assignees')
+          .insert(assignees)
+        
+        if (assigneeError) throw assigneeError
+      }
+
+      // 3. 첫 번째 댓글(내용) 등록
+      if (message.trim()) {
+        const { error: chatError } = await supabase
+          .from('chats')
+          .insert([{
+            ticket_id: ticketId,
+            sender_id: session.userId,
+            message
+          }])
+        
+        if (chatError) throw chatError
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() })
+      toast.success('접수가 완료되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`접수 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useStartWork() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, message, file_urls, staffIds, endDate }: { ticketId: string, message: string, file_urls?: string[], staffIds?: string[], endDate?: string }) => {
+      const session = getCurrentSession()
+      if (!session) throw new Error('로그인이 필요합니다.')
+
+      // 1. 상태를 'IN_PROGRESS'로 변경 및 종료일자 업데이트 (전달된 경우)
+      const updateData: any = { status: 'IN_PROGRESS' }
+      if (endDate) updateData.end_date = endDate
+
+      const { error: ticketError } = await supabase
+        .from('tickets')
+        .update(updateData)
+        .eq('id', ticketId)
+
+      if (ticketError) throw ticketError
+
+      // 2. 인력 배치가 필요한 경우 (고객 접수 건)
+      if (staffIds && staffIds.length > 0) {
+        const assignees = staffIds.map(userId => ({
+          ticket_id: ticketId,
+          user_id: userId
+        }))
+        const { error: assigneeError } = await supabase
+          .from('ticket_assignees')
+          .insert(assignees)
+        
+        if (assigneeError) throw assigneeError
+      }
+
+      // 3. 업무 시작 메시지 등록
+      const { error: chatError } = await supabase
+        .from('chats')
+        .insert([{
+          ticket_id: ticketId,
+          sender_id: session.userId,
+          message,
+          file_urls: file_urls || []
+        }])
+
+      if (chatError) throw chatError
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() })
+      toast.success('업무가 진행 상태로 변경되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`업무 시작 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useProjectStaffs(projectId?: string) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['project-staffs', projectId],
+    queryFn: async () => {
+      if (!projectId) return []
+      
+      const { data: members } = await supabase
+        .from('project_members')
+        .select('user_id')
+        .eq('project_id', projectId)
+      
+      if (!members || members.length === 0) return []
+      
+      const userIds = members.map(m => m.user_id)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds)
+        .in('role', ['ADMIN', 'STAFF'])
+      
+      return profiles || []
+    },
+    enabled: !!projectId,
   })
 }

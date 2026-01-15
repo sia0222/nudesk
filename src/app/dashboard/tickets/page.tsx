@@ -1,5 +1,7 @@
 'use client'
 
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useState, useMemo, useEffect } from 'react'
 import { useQueryClient } from "@tanstack/react-query"
 import { createClient } from "@/utils/supabase/client"
@@ -32,6 +34,7 @@ import { ko } from "date-fns/locale"
 import { getBusinessDate, isBusinessDay, HOLIDAYS_2026 } from "@/lib/date-utils"
 
 export default function TicketsPage() {
+  const router = useRouter()
   const supabase = createClient()
   const [isOpen, setIsOpen] = useState(false)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false) // 달력 팝오버 상태 추가
@@ -45,7 +48,7 @@ export default function TicketsPage() {
     end_date: undefined as Date | undefined,
     is_emergency: false,
     emergency_reason: '',
-    files: [] as { name: string, size: number, type: string }[] 
+    files: [] as File[] 
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -174,14 +177,9 @@ export default function TicketsPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (selectedFiles) {
-      const newFiles = Array.from(selectedFiles).map(f => ({
-        name: f.name,
-        size: f.size,
-        type: f.type
-      }));
       setFormData(prev => ({
         ...prev,
-        files: [...prev.files, ...newFiles]
+        files: [...prev.files, ...Array.from(selectedFiles)]
       }));
     }
   };
@@ -192,6 +190,8 @@ export default function TicketsPage() {
       files: prev.files.filter((_, i) => i !== index)
     }));
   };
+
+  const [isUploading, setIsUploading] = useState(false)
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -231,23 +231,50 @@ export default function TicketsPage() {
       return;
     }
 
-    const submissionData = {
-      ...formData,
-      end_date: formData.end_date ? format(formData.end_date, 'yyyy-MM-dd') : null,
-      file_urls: formData.files.map(f => f.name) 
-    };
-
-    createTicketMutation.mutate(submissionData, {
-      onSuccess: () => {
-        setIsOpen(false)
-        setFormData({
-          project_id: '', receipt_type: '온라인', title: '',
-          description: '', assigned_to_ids: [], end_date: undefined, is_emergency: false,
-          emergency_reason: '', files: []
-        })
-        setErrors({});
+    try {
+      setIsUploading(true)
+      const uploadedUrls: string[] = []
+      
+      for (const file of formData.files) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Math.random()}.${fileExt}`
+        const filePath = `new-tickets/${fileName}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('tickets')
+          .upload(filePath, file)
+          
+        if (uploadError) throw uploadError
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('tickets')
+          .getPublicUrl(filePath)
+          
+        uploadedUrls.push(publicUrl)
       }
-    })
+
+      const submissionData = {
+        ...formData,
+        end_date: formData.end_date ? format(formData.end_date, 'yyyy-MM-dd') : null,
+        file_urls: uploadedUrls 
+      };
+
+      createTicketMutation.mutate(submissionData, {
+        onSuccess: () => {
+          setIsOpen(false)
+          setFormData({
+            project_id: '', receipt_type: '온라인', title: '',
+            description: '', assigned_to_ids: [], end_date: undefined, is_emergency: false,
+            emergency_reason: '', files: []
+          })
+          setErrors({});
+        }
+      })
+    } catch (error: any) {
+      toast.error(`파일 업로드 실패: ${error.message}`)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -565,9 +592,9 @@ export default function TicketsPage() {
                 type="submit" 
                 form="ticket-form"
                 className="w-full h-16 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black text-lg shadow-xl shadow-zinc-200 transition-all active:scale-95"
-                disabled={createTicketMutation.isPending}
+                disabled={createTicketMutation.isPending || isUploading}
               >
-                {createTicketMutation.isPending ? <Loader2 className="animate-spin h-6 w-6" /> : '접수 완료하기'}
+                {createTicketMutation.isPending || isUploading ? <Loader2 className="animate-spin h-6 w-6" /> : '접수 완료하기'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -595,25 +622,28 @@ export default function TicketsPage() {
                  const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
                  
                  return (
-                   <TableRow 
-                     key={ticket.id}
-                     className={cn(
-                       "group transition-all border-zinc-50",
-                       ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
-                     )}
-                   >
+                            <TableRow
+                              key={ticket.id}
+                              onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+                              className={cn(
+                                "group transition-all border-zinc-50 cursor-pointer hover:bg-zinc-50/50",
+                                ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
+                              )}
+                            >
                      <TableCell className="py-6 pl-10 text-center">
                        <Badge variant="outline" className={cn(
                          "font-black px-4 py-1 rounded-full text-xs border-2 shadow-sm",
                          ticket.status === 'WAITING' ? "border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5" :
-                         ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" :
+                         ticket.status === 'ACCEPTED' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" :
+                         ticket.status === 'IN_PROGRESS' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" :
                          ticket.status === 'DELAYED' ? "border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5" :
                          ticket.status === 'REQUESTED' ? "border-[#242F67] text-[#242F67] bg-[#242F67]/5" :
                          ticket.status === 'COMPLETED' ? "border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5" :
                          "border-zinc-200 text-[#9CA3AF] bg-zinc-50/50"
                        )}>
                          {ticket.status === 'WAITING' ? '대기' : 
-                          ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? '진행' : 
+                          ticket.status === 'ACCEPTED' ? '접수' : 
+                          ticket.status === 'IN_PROGRESS' ? '진행' : 
                           ticket.status === 'DELAYED' ? '지연' : 
                           ticket.status === 'REQUESTED' ? '요청' : '완료'}
                        </Badge>
@@ -654,9 +684,11 @@ export default function TicketsPage() {
                        </div>
                      </TableCell>
                      <TableCell className="py-6 pr-10 text-right">
-                        <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
-                          <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
-                        </Button>
+                        <Link href={`/dashboard/tickets/${ticket.id}`}>
+                          <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
+                            <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
+                          </Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   )
