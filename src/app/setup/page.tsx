@@ -92,9 +92,9 @@ export default function SetupPage() {
         <CardHeader className="bg-zinc-900 text-white p-10 pb-12 relative overflow-hidden">
           <div className="relative z-10">
             <CardTitle className="text-4xl font-black tracking-tighter italic flex items-center gap-3">
-              <Wrench className="h-8 w-8 text-zinc-400" /> NuDesk Repair Engine
+              <Wrench className="h-8 w-8 text-[#9CA3AF]" /> NuDesk Repair Engine
             </CardTitle>
-            <CardDescription className="text-zinc-400 font-bold mt-2 text-lg">
+            <CardDescription className="text-[#9CA3AF] font-bold mt-2 text-lg">
               제 잘못으로 꼬인 DB 엔진과 계정을 제가 직접 고칩니다.
             </CardDescription>
           </div>
@@ -145,7 +145,7 @@ export default function SetupPage() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-zinc-900">수리가 완료되었습니다!</h3>
-                  <p className="text-zinc-500 font-bold mt-2">이제 로그인 페이지로 가서 [nubiz / 3345]로 로그인하세요.</p>
+                  <p className="text-[#9CA3AF] font-bold mt-2">이제 로그인 페이지로 가서 [nubiz / 3345]로 로그인하세요.</p>
                 </div>
                 <Button 
                   onClick={() => window.location.href = '/login'}

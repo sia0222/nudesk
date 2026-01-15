@@ -111,7 +111,7 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-10 px-4 rounded-xl font-black gap-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-all">
+        <Button variant="ghost" size="sm" className="h-10 px-4 rounded-xl font-black gap-2 text-[#9CA3AF] hover:bg-zinc-100 hover:text-zinc-900 transition-all">
           <Edit2 className="h-4 w-4" />
           수정
         </Button>
@@ -121,7 +121,7 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
           <div className="p-10 pb-5">
             <DialogHeader>
               <DialogTitle className="text-3xl font-black tracking-tighter">프로젝트 정보 수정</DialogTitle>
-              <DialogDescription className="font-bold text-zinc-400">
+              <DialogDescription className="font-bold text-[#9CA3AF]">
                 프로젝트 정보를 변경하고 인력을 다시 배치할 수 있습니다.
               </DialogDescription>
             </DialogHeader>
@@ -180,7 +180,7 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
             <div className="grid gap-3">
               <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                 고객사 배치 (하나만 선택 가능)
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                <span className="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
                   {formData.customer_id ? '선택됨' : '미선택'}
                 </span>
               </Label>
@@ -199,8 +199,8 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
                         )}
                       >
                         <div className={cn(
-                          "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
-                          formData.customer_id === customer.id ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
+                          "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic shadow-inner",
+                          formData.customer_id === customer.id ? "bg-zinc-800 text-white" : "bg-zinc-100 text-[#9CA3AF]"
                         )}>
                           C
                         </div>
@@ -218,7 +218,7 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
             <div className="grid gap-3">
               <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                 내부 인력 재배치
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                <span className="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
                   {formData.memberIds.filter(id => internalUsers.some(u => u.id === id)).length}명 선택됨
                 </span>
               </Label>
@@ -237,16 +237,16 @@ function EditProjectDialog({ project, allUsers, customers }: { project: any, all
                           )}
                         >
                           <div className={cn(
-                            "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
-                            formData.memberIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
+                            "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic shadow-inner",
+                            formData.memberIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-[#9CA3AF]"
                           )}>
                             {user.role[0]}
                           </div>
                           <div className="flex-1 overflow-hidden">
                             <p className="text-xs font-black truncate">{user.full_name}</p>
                             <p className={cn(
-                              "text-[10px] font-bold truncate opacity-60 uppercase",
-                              formData.memberIds.includes(user.id) ? "text-white" : "text-zinc-400"
+                              "text-xs font-bold truncate opacity-60 uppercase",
+                              formData.memberIds.includes(user.id) ? "text-white" : "text-[#9CA3AF]"
                             )}>
                               {user.role}
                             </p>
@@ -361,7 +361,7 @@ export default function ProjectsPage() {
               <div className="p-10 pb-5">
                 <DialogHeader>
                   <DialogTitle className="text-3xl font-black tracking-tighter">새 프로젝트 생성</DialogTitle>
-                  <DialogDescription className="font-bold text-zinc-400">
+                  <DialogDescription className="font-bold text-[#9CA3AF]">
                     프로젝트의 기본 정보를 입력하고 함께 할 인력을 배치하세요.
                   </DialogDescription>
                 </DialogHeader>
@@ -420,7 +420,7 @@ export default function ProjectsPage() {
                   <div className="grid gap-3">
                     <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                       고객사 배치 (하나만 선택 가능)
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                      <span className="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
                         {formData.customer_id ? '선택됨' : '미선택'}
                       </span>
                     </Label>
@@ -439,8 +439,8 @@ export default function ProjectsPage() {
                             )}
                           >
                               <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
-                                formData.customer_id === customer.id ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
+                                "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic shadow-inner",
+                                formData.customer_id === customer.id ? "bg-zinc-800 text-white" : "bg-zinc-100 text-[#9CA3AF]"
                               )}>
                                 C
                               </div>
@@ -458,7 +458,7 @@ export default function ProjectsPage() {
                   <div className="grid gap-3">
                     <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                       내부 인력 배치
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                      <span className="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
                         {formData.memberIds.filter(id => internalUsers.some(u => u.id === id)).length}명 선택됨
                       </span>
                     </Label>
@@ -477,16 +477,16 @@ export default function ProjectsPage() {
                               )}
                             >
                               <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
-                                formData.memberIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
+                                "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic shadow-inner",
+                                formData.memberIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-[#9CA3AF]"
                               )}>
                                 {user.role[0]}
                               </div>
                               <div className="flex-1 overflow-hidden">
                                 <p className="text-xs font-black truncate">{user.full_name}</p>
                                 <p className={cn(
-                                  "text-[10px] font-bold truncate opacity-60 uppercase",
-                                  formData.memberIds.includes(user.id) ? "text-white" : "text-zinc-400"
+                                  "text-xs font-bold truncate opacity-60 uppercase",
+                                  formData.memberIds.includes(user.id) ? "text-white" : "text-[#9CA3AF]"
                                 )}>
                                   {user.role}
                                 </p>
@@ -519,10 +519,10 @@ export default function ProjectsPage() {
 
       {/* 필터 및 검색 바 (UI용) */}
       <div className="flex items-center gap-3 bg-white p-3 rounded-[1.5rem] border shadow-sm max-w-md">
-        <Search className="h-5 w-5 text-zinc-400 ml-2" />
+        <Search className="h-5 w-5 text-[#9CA3AF] ml-2" />
         <Input 
           placeholder="프로젝트명으로 검색..." 
-          className="border-none shadow-none focus-visible:ring-0 placeholder:text-zinc-400 h-10 font-bold"
+          className="border-none shadow-none focus-visible:ring-0 placeholder:text-[#9CA3AF] h-10 font-bold"
         />
       </div>
 
@@ -532,13 +532,13 @@ export default function ProjectsPage() {
           <Table>
             <TableHeader className="bg-zinc-50/50">
               <TableRow className="hover:bg-transparent border-zinc-50">
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">상태</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">프로젝트명</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">고객사</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">종류</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">기간</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">등록일</TableHead>
-                <TableHead className="text-right font-black pr-10 text-zinc-400 uppercase text-[10px] tracking-widest">관리</TableHead>
+                <TableHead className="font-black py-6 pl-10 text-[#9CA3AF] uppercase text-xs tracking-widest">상태</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">프로젝트명</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">고객사</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">종류</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">기간</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">등록일</TableHead>
+                <TableHead className="text-right py-6 pr-10 font-black text-[#9CA3AF] uppercase text-xs tracking-widest">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -554,39 +554,36 @@ export default function ProjectsPage() {
                     >
                       <TableCell className="py-6 pl-10">
                         <Badge variant="outline" className={cn(
-                          "px-3 py-0.5 rounded-full font-black text-[10px] border-2",
+                          "px-3 py-0.5 rounded-full font-black text-xs border-2",
                           project.is_active 
-                            ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" 
-                            : "border-zinc-300 text-zinc-400 bg-zinc-100"
+                            ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" 
+                            : "border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5"
                         )}>
                           {project.is_active ? '활성' : '비활성'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-6">
                         <span className="font-black text-zinc-900 text-base tracking-tighter">{project.name}</span>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-xs font-bold text-zinc-600">
+                      <TableCell className="py-6">
+                        <span className="text-sm font-black text-[#9CA3AF]">
                           {project.customer?.company_name || '---'}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn(
-                          "px-3 py-0.5 rounded-full font-black text-[10px] border-2",
-                          project.project_type === '개발' ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" : "border-amber-500 text-amber-600 bg-amber-50/50"
-                        )}>
+                      <TableCell className="py-6">
+                        <span className="font-black text-[#9CA3AF] text-sm tracking-tighter">
                           {project.project_type}
-                        </Badge>
+                        </span>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-xs font-bold text-zinc-500">
+                      <TableCell className="py-6">
+                        <div className="text-sm font-black text-[#9CA3AF]">
                           {project.start_date?.replace(/-/g, '.') || '---'} ~ {project.end_date?.replace(/-/g, '.') || '---'}
                         </div>
                       </TableCell>
-                      <TableCell className="text-zinc-400 text-xs font-bold">
+                      <TableCell className="py-6 text-[#9CA3AF] text-sm font-black">
                         {new Date(project.created_at).toLocaleDateString('ko-KR')}
                       </TableCell>
-                      <TableCell className="text-right pr-10">
+                      <TableCell className="py-6 text-right pr-10">
                         <div className="flex items-center justify-end gap-1">
                           <EditProjectDialog project={project} allUsers={allUsers || []} customers={customers || []} />
                           <Button
@@ -595,8 +592,8 @@ export default function ProjectsPage() {
                             className={cn(
                               "h-10 px-4 rounded-xl font-black gap-2 transition-all",
                               project.is_active 
-                                ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700" 
-                                : "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                                ? "text-[#E53E3E] hover:bg-[#E53E3E]/5 hover:text-[#E53E3E]" 
+                                : "text-[#82B326] hover:bg-[#82B326]/5 hover:text-[#82B326]"
                             )}
                             onClick={() => handleToggleStatus(project.id, project.name, project.is_active)}
                             disabled={toggleStatusMutation.isPending}
@@ -624,8 +621,8 @@ export default function ProjectsPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                         <LayoutGrid className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">진행 중인 프로젝트가 없습니다</h3>
-                        <p className="text-zinc-400 text-sm font-medium mt-1">첫 번째 프로젝트를 생성하여 협업을 시작하세요.</p>
+                      <h3 className="text-lg font-normal text-zinc-900 tracking-tighter">진행 중인 프로젝트가 없습니다</h3>
+                        <p className="text-[#9CA3AF] text-sm font-normal mt-1">첫 번째 프로젝트를 생성하여 협업을 시작하세요.</p>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -189,7 +189,7 @@ export default function AdminCustomersPage() {
                   <DialogTitle className="text-3xl font-black tracking-tighter">
                     {editingCustomer ? '고객사 정보 수정' : '신규 고객사 등록'}
                   </DialogTitle>
-                  <DialogDescription className="font-bold text-zinc-400">
+                  <DialogDescription className="font-bold text-[#9CA3AF]">
                     {editingCustomer ? `${editingCustomer.company_name} 정보를 수정합니다.` : '새로운 고객사의 정보를 입력하세요.'}
                   </DialogDescription>
                 </DialogHeader>
@@ -222,7 +222,7 @@ export default function AdminCustomersPage() {
                   <div className="grid gap-3">
                     <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                       소속 고객 인력 (다수 선택 가능)
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                      <span className="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
                         {formData.userIds.length}명 선택됨
                       </span>
                     </Label>
@@ -241,16 +241,16 @@ export default function AdminCustomersPage() {
                               )}
                             >
                               <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic shadow-inner",
-                                formData.userIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-zinc-400"
+                                "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic shadow-inner",
+                                formData.userIds.includes(user.id) ? "bg-zinc-800 text-white" : "bg-zinc-100 text-[#9CA3AF]"
                               )}>
                                 {user.full_name?.[0] || 'U'}
                               </div>
                               <div className="flex-1 overflow-hidden">
                                 <p className="text-xs font-black truncate">{user.full_name}</p>
                                 <p className={cn(
-                                  "text-[9px] font-bold truncate opacity-60 uppercase",
-                                  formData.userIds.includes(user.id) ? "text-white" : "text-zinc-400"
+                                  "text-xs font-bold truncate opacity-60 uppercase",
+                                  formData.userIds.includes(user.id) ? "text-white" : "text-[#9CA3AF]"
                                 )}>
                                   {user.username}
                                 </p>
@@ -259,7 +259,7 @@ export default function AdminCustomersPage() {
                             </div>
                           ))}
                           {customerIndividuals.length === 0 && (
-                            <div className="col-span-2 py-8 text-center text-zinc-400 text-xs font-bold">
+                            <div className="col-span-2 py-8 text-center text-[#9CA3AF] text-xs font-bold">
                               등록된 고객 인력이 없습니다.
                             </div>
                           )}
@@ -271,7 +271,7 @@ export default function AdminCustomersPage() {
                   <div className="grid gap-3 pt-2">
                     <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                       관련 서류 (계약서/세금계산서)
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                      <span className="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
                         {formData.attachments.length}개 업로드됨
                       </span>
                     </Label>
@@ -279,7 +279,7 @@ export default function AdminCustomersPage() {
                       <div className="flex flex-wrap gap-2">
                         {formData.attachments.map((file, idx) => (
                           <div key={idx} className="flex items-center gap-2 bg-zinc-50 border border-zinc-100 px-3 py-2 rounded-xl group transition-all hover:bg-white hover:shadow-sm">
-                            <FileText className="h-4 w-4 text-zinc-400" />
+                            <FileText className="h-4 w-4 text-[#9CA3AF]" />
                             <span className="text-xs font-bold text-zinc-600 truncate max-w-[150px]">{file.file_name}</span>
                             <button 
                               type="button"
@@ -292,10 +292,10 @@ export default function AdminCustomersPage() {
                         ))}
                       </div>
                       <label className="flex items-center justify-center gap-2 h-14 w-full rounded-2xl border-2 border-dashed border-zinc-100 hover:border-zinc-300 hover:bg-zinc-50 transition-all cursor-pointer">
-                        <Paperclip className="h-5 w-5 text-zinc-400" />
-                        <span className="text-sm font-black text-zinc-400">파일 첨부하기</span>
+                        <Paperclip className="h-5 w-5 text-[#9CA3AF]" />
+                        <span className="text-sm font-black text-[#9CA3AF]">파일 첨부하기</span>
                         <input type="file" className="hidden" multiple onChange={handleFileUpload} disabled={isUploading} />
-                        {isUploading && <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />}
+                        {isUploading && <Loader2 className="h-4 w-4 animate-spin text-[#9CA3AF]" />}
                       </label>
                     </div>
                   </div>
@@ -325,10 +325,10 @@ export default function AdminCustomersPage() {
       </PageHeader>
 
       <div className="flex items-center gap-3 bg-white p-3 rounded-[1.5rem] border shadow-sm max-w-md">
-        <Search className="h-5 w-5 text-zinc-400 ml-2" />
+        <Search className="h-5 w-5 text-[#9CA3AF] ml-2" />
         <Input 
           placeholder="회사명으로 검색..." 
-          className="border-none shadow-none focus-visible:ring-0 placeholder:text-zinc-400 h-10 font-bold"
+          className="border-none shadow-none focus-visible:ring-0 placeholder:text-[#9CA3AF] h-10 font-bold"
         />
       </div>
 
@@ -337,12 +337,12 @@ export default function AdminCustomersPage() {
           <Table>
             <TableHeader className="bg-zinc-50/50">
               <TableRow className="hover:bg-transparent border-zinc-50">
-                <TableHead className="font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest">회사명</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">상태</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">연락처</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">소속 인력</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">관련 서류</TableHead>
-                <TableHead className="text-right font-black pr-10 text-zinc-400 uppercase text-[10px] tracking-widest">관리</TableHead>
+                <TableHead className="font-black py-6 pl-10 text-[#9CA3AF] uppercase text-xs tracking-widest">상태</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">회사명</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">연락처</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">소속 인력</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">관련 서류</TableHead>
+                <TableHead className="text-right py-6 font-black pr-10 text-[#9CA3AF] uppercase text-xs tracking-widest">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -352,36 +352,36 @@ export default function AdminCustomersPage() {
                     "hover:bg-zinc-50/50 transition-colors border-zinc-50",
                     !customer.is_active && "opacity-50 grayscale bg-zinc-50/30"
                   )}>
-                    <TableCell className="font-black text-zinc-900 pl-10">{customer.company_name}</TableCell>
-                    <TableCell>
+                    <TableCell className="py-6 pl-10">
                       <Badge variant="outline" className={cn(
-                        "px-3 py-0.5 rounded-full font-black text-[10px] border-2",
+                        "px-3 py-0.5 rounded-full font-black text-xs border-2",
                         customer.is_active 
-                          ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" 
-                          : "border-zinc-300 text-zinc-400 bg-zinc-100"
+                          ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" 
+                          : "border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5"
                       )}>
                         {customer.is_active ? '활성' : '비활성'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-zinc-500 text-sm font-bold">{customer.tel || '-'}</TableCell>
-                    <TableCell>
+                    <TableCell className="py-6 font-black text-zinc-900 text-base">{customer.company_name}</TableCell>
+                    <TableCell className="py-6 text-[#9CA3AF] text-sm font-bold">{customer.tel || '-'}</TableCell>
+                    <TableCell className="py-6">
                       <div className="flex -space-x-2">
                         {customer.profiles?.slice(0, 3).map((p: any, i: number) => (
-                          <div key={i} className="h-7 w-7 rounded-full border-2 border-white bg-zinc-100 flex items-center justify-center text-[8px] font-black text-zinc-400 shadow-sm" title={p.full_name}>
+                          <div key={i} className="h-7 w-7 rounded-full border-2 border-white bg-zinc-100 flex items-center justify-center text-xs font-black text-[#9CA3AF] shadow-sm" title={p.full_name}>
                             {p.full_name?.[0]}
                           </div>
                         ))}
                         {customer.profiles?.length > 3 && (
-                          <div className="h-7 w-7 rounded-full border-2 border-white bg-zinc-900 flex items-center justify-center text-[8px] font-black text-white shadow-sm">
+                          <div className="h-7 w-7 rounded-full border-2 border-white bg-zinc-900 flex items-center justify-center text-xs font-black text-white shadow-sm">
                             +{customer.profiles.length - 3}
                           </div>
                         )}
                         {(!customer.profiles || customer.profiles.length === 0) && (
-                          <span className="text-zinc-300 text-[10px] font-bold">없음</span>
+                          <span className="text-[#9CA3AF] text-sm font-bold">없음</span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-6">
                       <div className="flex gap-1 flex-wrap">
                         {customer.customer_attachments?.map((att: any, i: number) => (
                           <a 
@@ -391,21 +391,21 @@ export default function AdminCustomersPage() {
                             rel="noreferrer"
                             className="h-7 px-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 flex items-center gap-1.5 transition-colors"
                           >
-                            <FileText className="h-3 w-3 text-zinc-500" />
-                            <span className="text-[10px] font-black text-zinc-600">서류{i+1}</span>
+                            <FileText className="h-3 w-3 text-[#9CA3AF]" />
+                            <span className="text-sm font-black text-[#9CA3AF]">서류{i+1}</span>
                           </a>
                         ))}
                         {(!customer.customer_attachments || customer.customer_attachments.length === 0) && (
-                          <span className="text-zinc-300 text-[10px] font-bold">없음</span>
+                          <span className="text-[#9CA3AF] text-sm font-bold">없음</span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right pr-10">
+                    <TableCell className="py-6 text-right pr-10">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-10 px-4 rounded-xl font-black gap-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-all"
+                          className="h-10 px-4 rounded-xl font-black gap-2 text-[#9CA3AF] hover:bg-zinc-100 hover:text-zinc-900 transition-all"
                           onClick={() => handleOpenDialog(customer)}
                         >
                         <Edit2 className="h-4 w-4" />
@@ -416,7 +416,9 @@ export default function AdminCustomersPage() {
                         size="sm"
                         className={cn(
                           "h-10 px-4 rounded-xl font-black gap-2 transition-all",
-                          customer.is_active ? "text-amber-600 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50"
+                          customer.is_active 
+                            ? "text-[#E53E3E] hover:bg-[#E53E3E]/5 hover:text-[#E53E3E]" 
+                            : "text-[#82B326] hover:bg-[#82B326]/5 hover:text-[#82B326]"
                         )}
                         onClick={() => handleToggleStatus(customer.id, customer.company_name, customer.is_active)}
                       >
@@ -434,8 +436,8 @@ export default function AdminCustomersPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                         <Building2 className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">등록된 고객사가 없습니다</h3>
-                      <p className="text-zinc-400 text-sm font-medium mt-1">새로운 고객사를 등록하고 인력을 배치해 주세요.</p>
+                      <h3 className="text-lg font-normal text-zinc-900 tracking-tighter">등록된 고객사가 없습니다</h3>
+                      <p className="text-[#9CA3AF] text-sm font-normal mt-1">새로운 고객사를 등록하고 인력을 배치해 주세요.</p>
                     </div>
                   </TableCell>
                 </TableRow>

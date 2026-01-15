@@ -60,7 +60,7 @@ export default function AdminDashboardPage() {
                 </CardHeader>
                 <CardContent className="pt-4">
                   <CardTitle className="text-xl font-black mb-2 tracking-tight">{menu.name}</CardTitle>
-                  <p className="text-sm text-zinc-500 leading-relaxed font-medium">
+                  <p className="text-sm text-[#9CA3AF] leading-relaxed font-medium">
                     {menu.desc}
                   </p>
                 </CardContent>

@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, ShieldAlert, UserPlus, Search, Edit2, KeyRound, AlertCircle, Users } from 'lucide-react'
+import { Loader2, ShieldAlert, Plus, Search, Edit2, KeyRound, AlertCircle, Users } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { PageContainer } from "@/components/layout/page-container"
@@ -144,7 +144,7 @@ export default function AdminUsersPage() {
               onClick={() => handleOpenDialog()}
               className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95"
             >
-              <UserPlus className="h-6 w-6" />
+              <Plus className="h-6 w-6" />
               신규 인력 등록
             </Button>
           </DialogTrigger>
@@ -154,7 +154,7 @@ export default function AdminUsersPage() {
                 <DialogTitle className="text-3xl font-black tracking-tighter">
                   {editingUser ? '인력 정보 수정' : '신규 인력 등록'}
                 </DialogTitle>
-                <DialogDescription className="font-bold text-zinc-400">
+                <DialogDescription className="font-bold text-[#9CA3AF]">
                   {editingUser ? `${editingUser.username} 님의 정보를 수정합니다.` : '새로운 관리자 또는 직원의 계정 정보를 입력하세요.'}
                 </DialogDescription>
               </DialogHeader>
@@ -176,14 +176,14 @@ export default function AdminUsersPage() {
                     required
                   />
                   {formData.username && !/^[a-zA-Z0-9]+$/.test(formData.username) && (
-                    <p className="text-[10px] text-red-500 font-bold ml-1 flex items-center gap-1">
+                    <p className="text-xs text-red-500 font-bold ml-1 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       영어와 숫자만 사용 가능합니다.
                     </p>
                   )}
                   {formData.username && /^[a-zA-Z0-9]+$/.test(formData.username) && 
                     users?.some((u: any) => u.username.toLowerCase() === formData.username.toLowerCase() && u.id !== editingUser?.id) && (
-                    <p className="text-[10px] text-red-500 font-bold ml-1 flex items-center gap-1">
+                    <p className="text-xs text-red-500 font-bold ml-1 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       사용 중인 아이디입니다. 다시 입력해주세요.
                     </p>
@@ -248,7 +248,7 @@ export default function AdminUsersPage() {
                         <SelectValue placeholder="고객사를 선택하세요" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl shadow-xl border-zinc-100">
-                        <SelectItem value="none" className="font-bold py-3 text-zinc-400">선택 안 함</SelectItem>
+                        <SelectItem value="none" className="font-bold py-3 text-[#9CA3AF]">선택 안 함</SelectItem>
                         {customers?.map((customer: any) => (
                           <SelectItem key={customer.id} value={customer.id} className="font-bold py-3">
                             {customer.company_name}
@@ -281,10 +281,10 @@ export default function AdminUsersPage() {
 
       {/* 필터 및 검색 바 (UI용) */}
       <div className="flex items-center gap-3 bg-white p-3 rounded-[1.5rem] border shadow-sm max-w-md">
-        <Search className="h-5 w-5 text-zinc-400 ml-2" />
+        <Search className="h-5 w-5 text-[#9CA3AF] ml-2" />
         <Input 
           placeholder="이름 또는 아이디로 검색..." 
-          className="border-none shadow-none focus-visible:ring-0 placeholder:text-zinc-400 h-10 font-bold"
+          className="border-none shadow-none focus-visible:ring-0 placeholder:text-[#9CA3AF] h-10 font-bold"
         />
       </div>
 
@@ -294,46 +294,43 @@ export default function AdminUsersPage() {
           <Table>
             <TableHeader className="bg-zinc-50/50">
               <TableRow className="hover:bg-transparent border-zinc-50">
-                <TableHead className="font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest">아이디</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">이름</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">이메일</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">연락처</TableHead>
-                <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">현재 권한</TableHead>
-                <TableHead className="text-right font-black pr-10 text-zinc-400 uppercase text-[10px] tracking-widest">관리</TableHead>
+                <TableHead className="font-black py-6 pl-10 text-[#9CA3AF] uppercase text-xs tracking-widest">현재 권한</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">아이디</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">이름</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">이메일</TableHead>
+                <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">연락처</TableHead>
+                <TableHead className="text-right py-6 font-black pr-10 text-[#9CA3AF] uppercase text-xs tracking-widest">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users && users.length > 0 ? (
                 users.map((user) => (
                   <TableRow key={user.id} className="hover:bg-zinc-50/50 transition-colors border-zinc-50">
-                    <TableCell className="font-mono text-xs py-6 pl-10 text-zinc-500 font-bold">{user.username}</TableCell>
-                    <TableCell className="font-black text-zinc-900">
-                      {user.full_name}
-                      {user.customer && (
-                        <p className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                          {user.customer.company_name}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-zinc-500 text-sm font-bold">{user.email || '-'}</TableCell>
-                    <TableCell className="text-zinc-500 text-sm font-bold">{user.phone || '-'}</TableCell>
-                    <TableCell>
+                    <TableCell className="py-6 pl-10">
                       <Badge variant="outline" className={cn(
-                        "px-4 py-1 rounded-full font-black text-[10px] border-2 shadow-sm",
-                        user.role === 'MASTER' ? "border-zinc-900 bg-zinc-900 text-white" :
-                        user.role === 'ADMIN' ? "border-blue-500 text-blue-600 bg-blue-50/50" : 
-                        user.role === 'STAFF' ? "border-emerald-500 text-emerald-600 bg-emerald-50/50" : "border-zinc-200 text-zinc-400 bg-zinc-50/50"
+                        "px-4 py-1 rounded-full font-black text-xs border-2 shadow-sm",
+                        user.role === 'MASTER' ? "border-[#242F67] text-[#242F67] bg-[#242F67]/5" :
+                        user.role === 'ADMIN' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" : 
+                        user.role === 'STAFF' ? "border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5" : 
+                        user.role === 'CUSTOMER' ? "border-[#D98ADA] text-[#D98ADA] bg-[#D98ADA]/5" :
+                        "border-zinc-200 text-[#9CA3AF] bg-zinc-50/50"
                       )}>
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right pr-10">
+                    <TableCell className="py-6 font-mono text-sm text-[#9CA3AF] font-bold">{user.username}</TableCell>
+                    <TableCell className="py-6 font-black text-zinc-900 text-base">
+                      {user.full_name}
+                    </TableCell>
+                    <TableCell className="py-6 text-[#9CA3AF] text-sm font-bold">{user.email || '-'}</TableCell>
+                    <TableCell className="py-6 text-[#9CA3AF] text-sm font-bold">{user.phone || '-'}</TableCell>
+                    <TableCell className="py-6 text-right pr-10">
                       {user.role !== 'MASTER' && (
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-10 px-4 rounded-xl font-black gap-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition-all"
+                            className="h-10 px-4 rounded-xl font-black gap-2 text-[#9CA3AF] hover:bg-zinc-100 hover:text-zinc-900 transition-all"
                             onClick={() => handleOpenDialog(user)}
                           >
                             <Edit2 className="h-4 w-4" />
@@ -342,7 +339,7 @@ export default function AdminUsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-10 px-4 rounded-xl font-black gap-2 text-amber-600 hover:bg-amber-50 transition-all"
+                            className="h-10 px-4 rounded-xl font-black gap-2 text-[#E53E3E] hover:bg-[#E53E3E]/5 hover:text-[#E53E3E] transition-all"
                             onClick={() => handleResetPassword(user.id, user.username)}
                           >
                             <KeyRound className="h-4 w-4" />
@@ -360,8 +357,8 @@ export default function AdminUsersPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                         <Users className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">등록된 인력이 없습니다</h3>
-                      <p className="text-zinc-400 text-sm font-medium mt-1">시스템을 이용할 관리자나 직원을 등록해 주세요.</p>
+                      <h3 className="text-lg font-normal text-zinc-900 tracking-tighter">등록된 인력이 없습니다</h3>
+                      <p className="text-[#9CA3AF] text-sm font-normal mt-1">시스템을 이용할 관리자나 직원을 등록해 주세요.</p>
                     </div>
                   </TableCell>
                 </TableRow>

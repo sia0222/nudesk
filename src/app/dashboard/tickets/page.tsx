@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Zap, Loader2, AlertCircle, PlusCircle, Briefcase, ClipboardList, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon } from "lucide-react"
+import { Clock, Zap, Loader2, AlertCircle, Plus, Briefcase, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useTickets, useCreateTicket } from "@/hooks/use-tickets"
@@ -262,18 +262,18 @@ export default function TicketsPage() {
       >
         {profile?.role !== 'MASTER' && (profile?.role !== 'CUSTOMER' || (profile?.customer_id && myProjects && myProjects.length > 0)) && (
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
-                {profile?.role === 'CUSTOMER' ? <ClipboardList className="h-5 w-5" /> : <PlusCircle className="h-5 w-5" />}
-                {profile?.role === 'CUSTOMER' ? '업무 접수하기' : '새 티켓 등록'}
-              </Button>
-            </DialogTrigger>
+                    <DialogTrigger asChild>
+                      <Button className="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black gap-2 shadow-xl shadow-zinc-200 transition-all active:scale-95">
+                        <Plus className="h-5 w-5" />
+                        {profile?.role === 'CUSTOMER' ? '업무 접수하기' : '새 티켓 등록'}
+                      </Button>
+                    </DialogTrigger>
             <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col rounded-[2.5rem] p-0 border-none shadow-2xl">
               <DialogHeader className="p-10 pb-5 flex-none">
                 <DialogTitle className="text-3xl font-black tracking-tighter">
                   {profile?.role === 'CUSTOMER' ? '업무 접수' : '새 티켓 등록'}
                 </DialogTitle>
-                <DialogDescription className="font-bold text-zinc-400">
+                <DialogDescription className="font-bold text-[#9CA3AF]">
                   상세 정보를 입력하여 업무를 접수해 주세요.
                 </DialogDescription>
               </DialogHeader>
@@ -302,7 +302,7 @@ export default function TicketsPage() {
                                 {myProjects?.map(p => <SelectItem key={p.id} value={p.id} className="font-bold py-3">{p.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
-                            {errors.project_id && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
+                            {errors.project_id && <p className="text-xs font-bold text-red-500 ml-2 mt-1 italic">! {errors.project_id}</p>}
                           </div>
                         )}
 
@@ -320,7 +320,7 @@ export default function TicketsPage() {
                                     "flex-1 h-12 rounded-xl text-sm font-black transition-all",
                                     formData.receipt_type === type 
                                       ? "bg-white text-zinc-900 shadow-sm" 
-                                      : "text-zinc-400 hover:text-zinc-600"
+                                      : "text-[#9CA3AF] hover:text-zinc-600"
                                   )}
                                 >
                                   {type}
@@ -342,7 +342,7 @@ export default function TicketsPage() {
                             onChange={e => handleInputChange('title', e.target.value)}
                             required
                           />
-                          {errors.title && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.title}</p>}
+                          {errors.title && <p className="text-xs font-bold text-red-500 ml-2 mt-1 italic">! {errors.title}</p>}
                         </div>
 
                         <div className="grid gap-2 col-span-2">
@@ -358,10 +358,10 @@ export default function TicketsPage() {
                         {/* 내부 인력 배치: 고객사인 경우 숨김 */}
                         {profile?.role !== 'CUSTOMER' && (
                           <div className="grid gap-2 col-span-2">
-                            <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
-                              내부 인력 배치
-                              <span className="text-[10px] text-zinc-400 font-bold uppercase italic">{formData.assigned_to_ids.length}명 선택됨</span>
-                            </Label>
+                                    <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
+                                      내부 인력 배치
+                                      <span className="text-xs text-[#9CA3AF] font-bold uppercase italic">{formData.assigned_to_ids.length}명 선택됨</span>
+                                    </Label>
                             <div className={cn(
                               "bg-zinc-50 rounded-[1.5rem] p-4 border transition-all min-h-[120px]",
                               errors.assigned_to_ids ? "border-red-500 bg-red-50/30" : "border-zinc-100"
@@ -386,35 +386,35 @@ export default function TicketsPage() {
                                     )}
                                   >
                                     <div className={cn(
-                                      "h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-black italic",
-                                      formData.assigned_to_ids.includes(staff.id) ? "bg-zinc-800" : "bg-zinc-100 text-zinc-400"
+                                      "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic",
+                                      formData.assigned_to_ids.includes(staff.id) ? "bg-zinc-800" : "bg-zinc-100 text-[#9CA3AF]"
                                     )}>
                                       {staff.role[0]}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
                                       <p className="text-xs font-black truncate">{staff.full_name}</p>
-                                      <p className={cn("text-[10px] font-bold opacity-60", formData.assigned_to_ids.includes(staff.id) ? "text-white" : "text-zinc-400")}>{staff.role}</p>
+                                      <p className={cn("text-xs font-bold opacity-60", formData.assigned_to_ids.includes(staff.id) ? "text-white" : "text-[#9CA3AF]")}>{staff.role}</p>
                                     </div>
                                     {formData.assigned_to_ids.includes(staff.id) && <Check className="h-4 w-4" />}
                                   </div>
                                 ))}
                                 {(!projectStaffs || projectStaffs.length === 0) && (
-                                  <div className="col-span-2 py-8 text-center text-zinc-400 text-xs font-bold italic">
+                                  <div className="col-span-2 py-8 text-center text-[#9CA3AF] text-xs font-bold italic">
                                     프로젝트를 먼저 선택해 주세요.
                                   </div>
                                 )}
                               </div>
                             </div>
-                            {errors.assigned_to_ids && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.assigned_to_ids}</p>}
+                            {errors.assigned_to_ids && <p className="text-xs font-bold text-red-500 ml-2 mt-1 italic">! {errors.assigned_to_ids}</p>}
                           </div>
                         )}
 
                         <div className="grid gap-2 col-span-2">
                         <Label className="text-sm font-black text-zinc-700 ml-1 flex items-center justify-between">
                           종료 일자
-                          <span className={cn("text-[10px] font-bold italic", formData.is_emergency ? "text-red-600" : "text-blue-600")}>
-                            {formData.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
-                          </span>
+                                  <span className={cn("text-xs font-bold italic", formData.is_emergency ? "text-red-600" : "text-blue-600")}>
+                                    {formData.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
+                                  </span>
                         </Label>
                         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                           <PopoverTrigger asChild>
@@ -462,7 +462,7 @@ export default function TicketsPage() {
                             />
                           </PopoverContent>
                         </Popover>
-                        {errors.end_date && <p className="text-[11px] font-bold text-red-500 ml-2 mt-1 italic">! {errors.end_date}</p>}
+                                {errors.end_date && <p className="text-xs font-bold text-red-500 ml-2 mt-1 italic">! {errors.end_date}</p>}
                       </div>
 
                       <div className={cn(
@@ -508,7 +508,7 @@ export default function TicketsPage() {
                                  onChange={e => handleInputChange('emergency_reason', e.target.value)}
                                  required
                                />
-                               {errors.emergency_reason && <p className="text-[11px] font-bold text-red-500 ml-2 italic">! {errors.emergency_reason}</p>}
+                                       {errors.emergency_reason && <p className="text-xs font-bold text-red-500 ml-2 italic">! {errors.emergency_reason}</p>}
                              </div>
                            </div>
                          )}
@@ -526,7 +526,7 @@ export default function TicketsPage() {
                           />
                           <label 
                             htmlFor="ticket-file"
-                            className="flex items-center justify-center gap-2 w-full h-20 rounded-2xl border-2 border-dashed border-zinc-200 hover:border-zinc-900 hover:bg-zinc-50 transition-all cursor-pointer font-bold text-zinc-400 hover:text-zinc-900"
+                            className="flex items-center justify-center gap-2 w-full h-20 rounded-2xl border-2 border-dashed border-zinc-200 hover:border-zinc-900 hover:bg-zinc-50 transition-all cursor-pointer font-bold text-[#9CA3AF] hover:text-zinc-900"
                           >
                             <Paperclip className="h-5 w-5" />
                             {'클릭하여 파일을 추가하세요 (여러 개 선택 가능)'}
@@ -538,14 +538,14 @@ export default function TicketsPage() {
                             {formData.files.map((file, index) => (
                               <div key={index} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100 group">
                                 <div className="flex items-center gap-3">
-                                  <FileText className="h-4 w-4 text-zinc-400" />
+                                  <FileText className="h-4 w-4 text-[#9CA3AF]" />
                                   <span className="text-xs font-bold text-zinc-600 truncate max-w-[200px]">{file.name}</span>
-                                  <span className="text-[10px] text-zinc-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                                  <span className="text-xs text-[#9CA3AF]">({(file.size / 1024).toFixed(1)} KB)</span>
                                 </div>
                                 <button 
                                   type="button" 
                                   onClick={() => removeFile(index)}
-                                  className="text-zinc-400 hover:text-red-500 transition-colors"
+                                  className="text-[#9CA3AF] hover:text-red-500 transition-colors"
                                 >
                                   <X className="h-4 w-4" />
                                 </button>
@@ -579,76 +579,82 @@ export default function TicketsPage() {
          <Table>
            <TableHeader className="bg-zinc-50/50">
              <TableRow className="hover:bg-transparent border-zinc-50">
-               <TableHead className="w-[100px] font-black py-6 pl-10 text-zinc-400 uppercase text-[10px] tracking-widest text-center">상태</TableHead>
-               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">프로젝트</TableHead>
-               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">제목</TableHead>
-               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">종료일자</TableHead>
-               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">잔여일자(D-)</TableHead>
-               <TableHead className="font-black text-zinc-400 uppercase text-[10px] tracking-widest">등록일</TableHead>
-               <TableHead className="w-[80px]"></TableHead>
+               <TableHead className="w-[100px] font-black py-6 pl-10 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">상태</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">프로젝트</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">제목</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">종료일자</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">잔여일자(D-)</TableHead>
+               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">등록일</TableHead>
+               <TableHead className="w-[80px] py-6 pr-10 font-black"></TableHead>
              </TableRow>
            </TableHeader>
-            <TableBody>
-              {tickets && tickets.length > 0 ? (
-                tickets.map((ticket: any) => {
-                  const targetDate = ticket.end_date || ticket.deadline;
-                  const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
-                  
-                  return (
-                    <TableRow 
-                      key={ticket.id}
-                      className={cn(
-                        "group transition-all border-zinc-50",
-                        ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
-                      )}
-                    >
-                      <TableCell className="pl-10 text-center">
-                        <Badge className={cn(
-                          "font-black px-4 py-1 rounded-full text-[10px] shadow-sm",
-                          ticket.status === 'WAITING' ? "bg-amber-100 text-amber-600 hover:bg-amber-100 border-none" :
-                          ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600 hover:bg-blue-100 border-none" :
-                          "bg-zinc-100 text-zinc-500 hover:bg-zinc-100 border-none"
-                        )}>
-                          {ticket.status === 'WAITING' ? '대기' : ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? '진행' : '완료'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <span className="text-xs font-black text-zinc-400 uppercase tracking-tight leading-none">{ticket.project?.name || '---'}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {ticket.is_urgent && <Zap className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />}
-                          <span className={cn("font-black text-zinc-900 tracking-tight", ticket.is_urgent && "text-red-600")}>{ticket.title}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 font-black text-zinc-600 text-xs text-center">
-                          {targetDate ? format(new Date(targetDate), "yyyy-MM-dd") : '---'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {ticket.status === 'COMPLETED' ? (
-                          <span className="text-zinc-300 font-black text-xs">-</span>
-                        ) : dDay !== null ? (
-                          <span className={cn(
-                            "font-black text-xs",
-                            dDay < 0 ? "text-red-600" : 
-                            dDay === 0 ? "text-red-600" :
-                            "text-blue-600"
-                          )}>
-                            {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-300 text-xs">---</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 font-black text-zinc-400 text-xs">
-                          <Clock className="h-4 w-4 opacity-50" />
-                          {format(new Date(ticket.created_at), "yyyy-MM-dd")}
-                        </div>
-                      </TableCell>
-                      <TableCell className="pr-10 text-right">
+           <TableBody>
+             {tickets && tickets.length > 0 ? (
+               tickets.map((ticket: any) => {
+                 const targetDate = ticket.end_date || ticket.deadline;
+                 const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
+                 
+                 return (
+                   <TableRow 
+                     key={ticket.id}
+                     className={cn(
+                       "group transition-all border-zinc-50",
+                       ticket.is_urgent && "bg-red-50/20 hover:bg-red-50/40"
+                     )}
+                   >
+                     <TableCell className="py-6 pl-10 text-center">
+                       <Badge variant="outline" className={cn(
+                         "font-black px-4 py-1 rounded-full text-xs border-2 shadow-sm",
+                         ticket.status === 'WAITING' ? "border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5" :
+                         ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" :
+                         ticket.status === 'DELAYED' ? "border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5" :
+                         ticket.status === 'REQUESTED' ? "border-[#242F67] text-[#242F67] bg-[#242F67]/5" :
+                         ticket.status === 'COMPLETED' ? "border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5" :
+                         "border-zinc-200 text-[#9CA3AF] bg-zinc-50/50"
+                       )}>
+                         {ticket.status === 'WAITING' ? '대기' : 
+                          ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS' ? '진행' : 
+                          ticket.status === 'DELAYED' ? '지연' : 
+                          ticket.status === 'REQUESTED' ? '요청' : '완료'}
+                       </Badge>
+                     </TableCell>
+                     <TableCell className="py-6">
+                       <span className="text-sm font-black text-[#9CA3AF] uppercase tracking-tight leading-none">{ticket.project?.name || '---'}</span>
+                     </TableCell>
+                     <TableCell className="py-6">
+                       <div className="flex items-center gap-2">
+                         {ticket.is_urgent && <Zap className="h-4 w-4 text-[#E53E3E] fill-[#E53E3E] animate-pulse" />}
+                         <span className={cn("font-black text-zinc-900 tracking-tight text-base", ticket.is_urgent && "text-[#E53E3E]")}>{ticket.title}</span>
+                       </div>
+                     </TableCell>
+                     <TableCell className="py-6">
+                       <div className="flex items-center gap-2 font-black text-[#9CA3AF] text-sm text-center">
+                         {targetDate ? format(new Date(targetDate), "yyyy-MM-dd") : '---'}
+                       </div>
+                     </TableCell>
+                     <TableCell className="py-6">
+                       {ticket.status === 'COMPLETED' ? (
+                         <span className="text-[#9CA3AF] font-black text-sm">-</span>
+                       ) : dDay !== null ? (
+                         <span className={cn(
+                           "font-black text-sm",
+                           dDay < 0 ? "text-[#E53E3E]" : 
+                           dDay === 0 ? "text-[#E53E3E]" :
+                           "text-[#242F67]"
+                         )}>
+                           {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
+                         </span>
+                       ) : (
+                         <span className="text-[#9CA3AF] font-black text-sm">---</span>
+                       )}
+                     </TableCell>
+                     <TableCell className="py-6">
+                       <div className="flex items-center gap-2 font-black text-[#9CA3AF] text-sm">
+                         <Clock className="h-4 w-4 opacity-50" />
+                         {format(new Date(ticket.created_at), "yyyy-MM-dd")}
+                       </div>
+                     </TableCell>
+                     <TableCell className="py-6 pr-10 text-right">
                         <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
                           <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
                         </Button>
@@ -663,8 +669,8 @@ export default function TicketsPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
                         <Briefcase className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">조회 가능한 티켓이 없습니다</h3>
-                      <p className="text-zinc-400 text-sm font-medium mt-1">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>
+                      <h3 className="text-lg font-normal text-zinc-900 tracking-tighter">조회 가능한 티켓이 없습니다</h3>
+                      <p className="text-[#9CA3AF] text-sm font-normal mt-1">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>
                     </div>
                   </TableCell>
                 </TableRow>

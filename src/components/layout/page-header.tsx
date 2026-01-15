@@ -30,7 +30,7 @@ export function PageHeader({
             {title}
           </h1>
           {description && (
-            <p className="text-zinc-500 font-bold tracking-tight italic">
+            <p className="text-[#9CA3AF] text-sm font-bold tracking-tight italic">
               {description}
             </p>
           )}

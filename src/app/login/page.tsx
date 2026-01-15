@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { signInWithUsername } from '@/lib/authHelpers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,17 +40,25 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-[400px]">
         <div className="mb-8 text-center">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-2xl mb-4">
-            <Lock className="h-8 w-8" />
+          <div className="inline-flex mb-6 justify-center">
+            <div className="relative h-24 w-24 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white bg-white">
+              <Image 
+                src="/logo.png" 
+                alt="NuDesk Logo" 
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
           </div>
           <h1 className="text-4xl font-black tracking-tighter text-gray-900">NuDesk</h1>
-          <p className="text-gray-600 font-medium">실무 참여형 스마트 관리 시스템</p>
+          <p className="text-[#9CA3AF] font-medium">실무 참여형 스마트 관리 시스템</p>
         </div>
 
         <Card className="border-none shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-[2.5rem] overflow-hidden bg-white">
           <CardHeader className="space-y-3 p-10 pb-5">
             <CardTitle className="text-3xl font-black tracking-tighter italic">로그인</CardTitle>
-            <CardDescription className="font-bold text-zinc-400">
+            <CardDescription className="font-bold text-[#9CA3AF]">
               시스템 이용을 위해 아이디와 비밀번호를 입력하세요.
             </CardDescription>
           </CardHeader>
@@ -58,7 +67,7 @@ export default function LoginPage() {
               <div className="grid gap-2">
                 <Label htmlFor="username" className="text-sm font-black text-zinc-700 ml-1">아이디</Label>
                 <div className="relative">
-                  <User className="absolute left-5 top-5 h-4 w-4 text-zinc-400" />
+                  <User className="absolute left-5 top-5 h-4 w-4 text-[#9CA3AF]" />
                   <Input
                     id="username"
                     type="text"
@@ -73,7 +82,7 @@ export default function LoginPage() {
               <div className="grid gap-2">
                 <Label htmlFor="password" className="text-sm font-black text-zinc-700 ml-1">비밀번호</Label>
                 <div className="relative">
-                  <Lock className="absolute left-5 top-5 h-4 w-4 text-zinc-400" />
+                  <Lock className="absolute left-5 top-5 h-4 w-4 text-[#9CA3AF]" />
                   <Input
                     id="password"
                     type="password"
@@ -101,7 +110,7 @@ export default function LoginPage() {
           </form>
         </Card>
         
-        <p className="mt-8 text-center text-sm text-zinc-500">
+        <p className="mt-8 text-center text-sm text-[#9CA3AF]">
           계정이 없으신가요? <span className="text-primary font-semibold cursor-pointer hover:underline">관리자에게 문의하세요</span>
         </p>
       </div>

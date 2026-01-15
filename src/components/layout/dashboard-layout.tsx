@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -73,10 +74,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   return (
-    <div className="flex h-screen bg-zinc-50 font-sans antialiased text-zinc-900">
+    <div className="flex h-screen bg-[#E9ECEF] font-sans antialiased text-zinc-900">
       <aside className="w-64 flex flex-col border-r bg-white shadow-sm transition-all">
-        <div className="h-20 flex items-center px-8 font-black text-2xl border-b tracking-tighter italic">
-          NuDesk
+        <div className="h-20 flex items-center px-8 gap-3 border-b">
+          <div className="relative h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-zinc-100 bg-white">
+            <Image 
+              src="/logo.png" 
+              alt="NuDesk Logo" 
+              fill
+              className="object-cover"
+            />
+          </div>
+          <span className="font-black text-2xl tracking-tighter italic">NuDesk</span>
         </div>
         
         <ScrollArea className="flex-1 p-4">
@@ -87,7 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black transition-all",
                   pathname === item.href 
                     ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200" 
-                    : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+                    : "text-[#9CA3AF] hover:bg-zinc-100 hover:text-zinc-900"
                 )}>
                   <item.icon className="h-5 w-5" />
                   {item.name}
@@ -102,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/dashboard/settings">
               <span className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-black transition-all",
-                pathname === '/dashboard/settings' ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:bg-zinc-100"
+                pathname === '/dashboard/settings' ? "bg-zinc-100 text-zinc-900" : "text-[#9CA3AF] hover:bg-zinc-100"
               )}>
                 <Settings className="h-5 w-5" /> 설정
               </span>
@@ -119,12 +128,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* 유저 프로필 카드 (권한 정보 강제 갱신) */}
         <div className="p-4 border-t bg-zinc-50/50">
           <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border shadow-sm">
-            <div className="h-10 w-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center text-xs font-black italic">
+            <div className={cn(
+              "h-10 w-10 rounded-xl text-white flex items-center justify-center text-xs font-black italic",
+              profile?.role === 'CUSTOMER' ? "bg-[#D98ADA]" : "bg-[#242F67]"
+            )}>
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (profile?.role?.[0] || '?')}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-black text-zinc-900">{profile?.full_name || '로그인 필요'}</p>
-              <p className="truncate text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{profile?.role || '---'}</p>
+              <p className="truncate text-base font-black text-zinc-900">{profile?.full_name || '로그인 필요'}</p>
+              <p className={cn(
+                "truncate text-xs font-bold uppercase tracking-widest",
+                profile?.role === 'CUSTOMER' ? "text-[#D98ADA]" : "text-[#242F67]"
+              )}>
+                {profile?.role || '---'}
+              </p>
             </div>
           </div>
         </div>

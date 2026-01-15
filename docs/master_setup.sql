@@ -33,7 +33,7 @@ DROP TYPE IF EXISTS receipt_type CASCADE; -- 추가
 
 -- 4. 타입 정의
 CREATE TYPE user_role AS ENUM ('MASTER', 'ADMIN', 'STAFF', 'CUSTOMER');
-CREATE TYPE ticket_status AS ENUM ('WAITING', 'ACCEPTED', 'IN_PROGRESS', 'DELAYED', 'COMPLETED');
+CREATE TYPE ticket_status AS ENUM ('WAITING', 'ACCEPTED', 'IN_PROGRESS', 'DELAYED', 'REQUESTED', 'COMPLETED');
 CREATE TYPE request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE project_type AS ENUM ('개발', '유지');
 CREATE TYPE receipt_type AS ENUM ('온라인', '전화', '팩스', '이메일'); -- 추가

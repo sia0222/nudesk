@@ -44,6 +44,7 @@
 - **주요 동작**: 
   - 등록/수정: 고객사 정보 저장, 다중 파일 업로드(Supabase Storage: `customers` 버킷), 소속 인력 배정(`customer_id` 업데이트)
   - 상태변경: `is_active` 필드 토글 (비활성화 시 프로젝트 노출 및 접수 제한)
+- **파일 관리**: 업로드된 파일은 `customer_attachments` 테이블에 URL로 기록됩니다.
 
 ---
 
@@ -107,7 +108,7 @@
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | customer_id | UUID | 고객사 FK (자동 할당) |
-| status | ticket_status | WAITING, ACCEPTED, IN_PROGRESS, DELAYED, COMPLETED |
+| status | ticket_status | WAITING, ACCEPTED, IN_PROGRESS, DELAYED, REQUESTED, COMPLETED |
 | is_emergency | BOOLEAN | 긴급 여부 |
 
 ---
