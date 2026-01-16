@@ -314,16 +314,16 @@ export default function TicketDetailPage() {
                 <div className="space-y-1">
                   <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">현재 진행 상황</p>
                   <div className="flex items-center gap-3">
-                    <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">{progressInfo.percentage}%</h2>
-                    <span className="text-2xl font-black text-zinc-200 tracking-tighter">/</span>
-                    <span className="text-2xl font-black text-[#3B82F6] tracking-tighter">
+                    <h2 className="text-xl font-black text-zinc-900 tracking-tighter">{progressInfo.percentage}%</h2>
+                    <span className="text-xl font-black text-zinc-200 tracking-tighter">/</span>
+                    <span className="text-xl font-black text-[#3B82F6] tracking-tighter">
                       {statusMap[ticket.status].label}
                     </span>
                   </div>
                 </div>
                 {(profile?.role === 'ADMIN' || profile?.role === 'STAFF') && (
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" className="h-10 px-6 rounded-xl border-zinc-200 font-black text-xs text-zinc-600 hover:bg-zinc-50 transition-all">
+                    <Button variant="outline" className="h-10 px-6 rounded-xl border-zinc-200 font-black text-xs text-zinc-900 hover:bg-zinc-50 transition-all">
                       연기 요청
                     </Button>
                     <Button className="h-10 px-6 rounded-xl bg-zinc-900 text-white font-black text-xs hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-100">
@@ -369,7 +369,7 @@ export default function TicketDetailPage() {
                       {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm')}
                     </span>
                   </div>
-                  <h1 className="text-2xl font-black text-zinc-900 tracking-tighter leading-tight">
+                  <h1 className="text-xl font-black text-zinc-900 tracking-tighter leading-tight">
                     {ticket.title}
                   </h1>
                   <div className="min-h-[200px] text-zinc-900 font-black text-lg leading-relaxed whitespace-pre-wrap">
@@ -389,7 +389,7 @@ export default function TicketDetailPage() {
                         className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
                       >
                         <FileText className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
-                        <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">첨부파일 {i + 1}</span>
+                        <span className="text-xs font-black text-zinc-900 group-hover:text-zinc-900">첨부파일 {i + 1}</span>
                       </a>
                     ))}
                   </div>
@@ -425,7 +425,7 @@ export default function TicketDetailPage() {
                           className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
                         >
                           <Paperclip className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
-                          <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">파일 {idx + 1}</span>
+                          <span className="text-xs font-black text-zinc-900 group-hover:text-zinc-900">파일 {idx + 1}</span>
                         </a>
                       ))}
                     </div>
@@ -434,6 +434,24 @@ export default function TicketDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* 긴급 사유 섹션 (별도 구역) */}
+          {ticket.is_emergency && (
+            <Card className="border border-red-100 bg-red-50/5 shadow-[0_8px_30px_rgba(239,68,68,0.02)] rounded-[1.5rem] overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-9 w-9 rounded-xl bg-white border border-red-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Zap className="h-4.5 w-4.5 text-red-600 fill-red-600 animate-pulse" />
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className="text-[10px] font-black text-red-600 uppercase tracking-widest flex-shrink-0">긴급 사유</span>
+                  <div className="h-3 w-px bg-red-200" />
+                  <p className="text-base font-bold text-zinc-900 line-clamp-1">
+                    "{ticket.emergency_reason || '사유가 작성되지 않았습니다.'}"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* 3. 부가 정보 (2x2 통합 그리드) */}
           <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[1.5rem] overflow-hidden bg-white">
@@ -491,19 +509,6 @@ export default function TicketDetailPage() {
                   </div>
                 </div>
               </div>
-
-              {/* 긴급 처리 사유 (있는 경우에만 얇게 한 줄 추가) */}
-              {ticket.is_emergency && (
-                <div className="bg-red-50/10 p-4 flex items-center gap-4 border-t border-red-50">
-                  <div className="flex-shrink-0 ml-1">
-                    <Zap className="h-3.5 w-3.5 fill-red-600 text-red-600 animate-pulse" />
-                  </div>
-                  <div className="flex gap-3 items-center">
-                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">긴급 사유</p>
-                    <p className="text-xs font-bold text-zinc-900">"{ticket.emergency_reason || '사유 미작성'}"</p>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -527,7 +532,7 @@ export default function TicketDetailPage() {
                           <div className={cn("flex items-center gap-2 mb-1", isMyChat ? "flex-row-reverse" : "flex-row")}>
                             <span className={cn(
                               "text-xs font-black uppercase tracking-widest",
-                              roleColorMap[chat.sender?.role] || "text-zinc-500"
+                              roleColorMap[chat.sender?.role] || "text-zinc-900"
                             )}>
                               {chat.sender?.role}
                             </span>
@@ -539,10 +544,10 @@ export default function TicketDetailPage() {
 
                           {chat.message && (
                             <div className={cn(
-                              "p-4 rounded-[1.5rem] text-sm font-black whitespace-pre-wrap shadow-sm border transition-all",
+                              "p-4 rounded-[1.5rem] text-base font-black whitespace-pre-wrap shadow-sm border transition-all",
                               isMyChat 
                                 ? "bg-zinc-900 text-white border-zinc-900 rounded-tr-none" 
-                                : "bg-white text-zinc-700 border-zinc-100 rounded-tl-none"
+                                : "bg-white text-zinc-900 border-zinc-100 rounded-tl-none"
                             )}>
                               {chat.message}
                             </div>
@@ -560,7 +565,7 @@ export default function TicketDetailPage() {
                                     "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all border shadow-sm group",
                                     isMyChat 
                                       ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700" 
-                                      : "bg-zinc-50 border-zinc-100 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+                                      : "bg-zinc-50 border-zinc-100 text-zinc-900 hover:text-zinc-900 hover:bg-zinc-100"
                                   )}
                                 >
                                   <Paperclip className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
@@ -596,7 +601,7 @@ export default function TicketDetailPage() {
                        {!isInitialDatePassedOrToday && (
                          <div className="space-y-3">
                            <div className="flex items-center justify-between ml-1">
-                             <label className="text-sm font-black text-zinc-700">종료일 확인 및 변경</label>
+                             <label className="text-sm font-black text-zinc-900">종료일 확인 및 변경</label>
                            <span className={cn("text-xs font-black", ticket.is_emergency ? "text-red-600" : "text-blue-600")}>
                              {ticket.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
                            </span>
@@ -641,7 +646,7 @@ export default function TicketDetailPage() {
                        {/* 인력 배치 폼 */}
                       {(!ticket.assignees || ticket.assignees.length === 0) && (
                         <div className="space-y-3">
-                          <label className="text-sm font-black text-zinc-700 ml-1">내부 인력 배치</label>
+                          <label className="text-sm font-black text-zinc-900 ml-1">내부 인력 배치</label>
                           <div className="grid grid-cols-1 gap-2">
                             {projectStaffs?.map((staff: any) => (
                               <div 
@@ -651,7 +656,7 @@ export default function TicketDetailPage() {
                                   "flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer",
                                   selectedStaffs.includes(staff.id) 
                                     ? "bg-zinc-900 border-zinc-900 text-white shadow-lg" 
-                                    : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
+                                    : "bg-white border-zinc-100 text-zinc-900 hover:border-zinc-300"
                                 )}
                               >
                                 <div className={cn(
@@ -683,7 +688,7 @@ export default function TicketDetailPage() {
                       {files.map((file, index) => (
                         <div key={index} className="flex items-center gap-2 bg-white border border-zinc-200 px-3 py-1.5 rounded-xl shadow-sm animate-in fade-in slide-in-from-bottom-1">
                           <FileText className="h-3 w-3 text-[#9CA3AF]" />
-                          <span className="text-xs font-black text-zinc-600 truncate max-w-[150px]">{file.name}</span>
+                          <span className="text-xs font-black text-zinc-900 truncate max-w-[150px]">{file.name}</span>
                           <button type="button" onClick={() => removeFile(index)} className="text-zinc-300 hover:text-red-500 transition-colors">
                             <X className="h-3 w-3" />
                           </button>
