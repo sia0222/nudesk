@@ -353,7 +353,7 @@ export function useStartWork() {
         if (assigneeError) throw assigneeError
       }
 
-      // 3. 업무 시작 메시지 등록
+      // 3. 조치 계획 등록
       const { error: chatError } = await supabase
         .from('chats')
         .insert([{

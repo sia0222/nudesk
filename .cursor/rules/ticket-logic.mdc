@@ -8,7 +8,7 @@ globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/u
 ## 1. Status Transitions (상태 전환)
 
 - **Automatic Acceptance**: When an `ADMIN` or `STAFF` views a ticket in `WAITING` status, it must automatically transition to `ACCEPTED`.
-- **Work Commencement**: Transition from `ACCEPTED` to `IN_PROGRESS` occurs when the "Start Work Message" (실무 착수 메시지) is submitted.
+- **Work Commencement**: Transition from `ACCEPTED` to `IN_PROGRESS` occurs when the "Action Plan" (조치 계획) is submitted.
 - **Automatic Delay**: Any ticket in `WAITING`, `ACCEPTED`, or `IN_PROGRESS` whose `confirmed_end_date` (or `initial_end_date` if not set) is in the past must be treated as `DELAYED`.
 
 ## 2. Date Management (종료일 관리)
@@ -25,7 +25,7 @@ globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/u
 
 ## 3. Message Distinction (메시지 구분)
 
-- **Start Work Message (실무 착수 메시지)**:
+- **Action Plan (조치 계획)**:
     - The first message sent by an Admin/Staff in `ACCEPTED` status.
     - Displayed in the **Left Panel** under the ticket description.
     - Filtered out from the general chat history in the Right Panel.

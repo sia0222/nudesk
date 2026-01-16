@@ -141,7 +141,7 @@ CREATE TABLE public.chats (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-COMMENT ON TABLE public.chats IS '티켓 내 모든 소통 내역. 운영진이 작성한 첫 메시지는 실무 착수 메시지로 UI에서 별도 관리됨';
+COMMENT ON TABLE public.chats IS '티켓 내 모든 소통 내역. 운영진이 작성한 첫 메시지는 조치 계획으로 UI에서 별도 관리됨';
 
 -- 6. 테스트 데이터 삽입
 INSERT INTO public.profiles (username, password, full_name, role, is_approved) VALUES

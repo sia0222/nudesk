@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
-import { Briefcase, Clock, Calendar as CalendarIcon, User, Building2, FileText, Send, Paperclip, X, Check, Loader2, Zap, ArrowLeft, Quote } from 'lucide-react'
+import { Briefcase, Clock, Calendar as CalendarIcon, User, Building2, FileText, Send, Paperclip, X, Check, Loader2, Zap, ArrowLeft, Quote, Bookmark, Star, Mail, CheckCircle2 } from 'lucide-react'
 import { useTicket, useAddComment, useAssignStaffAndAccept, useProjectStaffs, useStartWork, useUpdateTicketStatus } from "@/hooks/use-tickets"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -42,7 +42,21 @@ export default function TicketDetailPage() {
   const { data: projectStaffs } = useProjectStaffs(ticket?.project_id)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // 실무 착수 메시지 추출 (운영진이 작성한 첫 번째 메시지)
+  // 진행률 계산 로직
+  const progressInfo = useMemo(() => {
+    if (!ticket) return { percentage: 0, label: '0%', color: 'bg-zinc-200' };
+    switch (ticket.status) {
+      case 'WAITING': return { percentage: 5, label: '5%', color: 'bg-[#F6AD55]' };
+      case 'ACCEPTED': return { percentage: 30, label: '30%', color: 'bg-[#82B326]' };
+      case 'IN_PROGRESS': return { percentage: 75, label: '75%', color: 'bg-[#3B82F6]' };
+      case 'DELAYED': return { percentage: 75, label: '75%', color: 'bg-[#E53E3E]' };
+      case 'REQUESTED': return { percentage: 85, label: '85%', color: 'bg-[#242F67]' };
+      case 'COMPLETED': return { percentage: 100, label: '100%', color: 'bg-zinc-400' };
+      default: return { percentage: 0, label: '0%', color: 'bg-zinc-200' };
+    }
+  }, [ticket?.status]);
+
+  // 조치 계획 추출 (운영진이 작성한 첫 번째 메시지)
   const startWorkMessage = useMemo(() => {
     if (!ticket?.chats || ticket.chats.length === 0) return null;
     return ticket.chats.find((chat: any) => 
@@ -291,96 +305,73 @@ export default function TicketDetailPage() {
         {/* 정보 영역 (좌측) */}
         <div className={cn(
           "space-y-6 transition-all duration-500",
-          !showRightArea ? "lg:col-span-12 max-w-4xl mx-auto" : "lg:col-span-7"
+          !showRightArea ? "lg:col-span-12 max-w-5xl mx-auto" : "lg:col-span-7"
         )}>
-          <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2.5rem] overflow-hidden bg-white">
-            <CardContent className="p-10 space-y-10">
-              {/* 1. 상태 및 확정 일정 섹션 (가장 중요) */}
-              <div className="flex flex-wrap items-center justify-between gap-6">
-                <div className="space-y-3">
-                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest ml-1">현재 상태</p>
+          {/* 1. 진행률 섹션 */}
+          <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2rem] overflow-hidden bg-white">
+            <CardContent className="p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">현재 진행 상황</p>
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={cn("px-6 py-2 rounded-full font-black text-xs border-2 shadow-sm", statusMap[ticket.status].color)}>
+                    <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">{progressInfo.percentage}%</h2>
+                    <span className="text-2xl font-black text-zinc-200 tracking-tighter">/</span>
+                    <span className="text-2xl font-black text-[#3B82F6] tracking-tighter">
                       {statusMap[ticket.status].label}
-                    </Badge>
-                    {ticket.is_emergency && (
-                      <Badge variant="destructive" className="px-6 py-2 rounded-full font-black text-xs bg-red-600 border-none animate-pulse">
-                        긴급
-                      </Badge>
-                    )}
+                    </span>
                   </div>
                 </div>
-                <div className="space-y-3 text-right">
-                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest mr-1">확정 종료일자</p>
-                  <p className="text-base font-black text-zinc-900 italic tracking-tighter">
-                    {ticket.confirmed_end_date 
-                      ? format(new Date(ticket.confirmed_end_date), 'yyyy.MM.dd') 
-                      : '---'}
-                  </p>
-                </div>
-              </div>
-
-              {/* 2. 업무 내용 및 착수 메시지 섹션 */}
-              <div className="space-y-8 bg-zinc-50/30 rounded-[2.5rem]">
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <h1 className="text-2xl font-black text-zinc-900 tracking-tighter leading-tight">
-                      {ticket.title}
-                    </h1>
-                    <div className="min-h-[200px] text-zinc-900 font-black text-lg leading-relaxed whitespace-pre-wrap">
-                      {ticket.description || '상세 내용이 없습니다.'}
-                    </div>
-                  </div>
-
-                  {/* 착수 메시지 (있는 경우 내용 하단에 배치) */}
-                  {startWorkMessage && (
-                    <div className="pt-8 border-t border-zinc-200/60 space-y-4">
-                      <div className="flex items-center gap-2 text-[#9CA3AF]">
-                        <Quote className="h-5 w-5" />
-                        <span className="text-xs font-black uppercase tracking-widest">
-                          실무 착수 메시지 ({format(new Date(startWorkMessage.created_at), 'yyyy.MM.dd HH:mm')})
-                        </span>
-                      </div>
-                      <div className="space-y-3 ml-1">
-                        <div className="flex items-center gap-2">
-                          <span className={cn("text-xs font-black uppercase tracking-widest", roleColorMap[startWorkMessage.sender?.role])}>
-                            {startWorkMessage.sender?.role}
-                          </span>
-                          <span className="text-xs font-black text-zinc-900">{startWorkMessage.sender?.full_name}</span>
-                        </div>
-                        <p className="text-base font-black text-zinc-900 leading-relaxed whitespace-pre-wrap">
-                          {startWorkMessage.message}
-                        </p>
-                        {startWorkMessage.file_urls && startWorkMessage.file_urls.length > 0 && (
-                          <div className="flex flex-wrap gap-2 pt-2">
-                            {startWorkMessage.file_urls.map((url: string, idx: number) => (
-                              <a key={idx} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-xs font-black text-[#9CA3AF] hover:text-zinc-900">
-                                <Paperclip className="h-3.5 w-3.5" />
-                                파일 {idx + 1}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 긴급 처리 사유 */}
-                {ticket.is_emergency && (
-                  <div className="bg-red-50/50 p-6 rounded-2xl border border-red-100 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-red-600 fill-red-600 animate-pulse" />
-                      <span className="text-xs font-black text-red-600 uppercase tracking-widest">긴급 처리 사유</span>
-                    </div>
-                    <p className="text-base font-bold text-zinc-900 leading-relaxed">
-                      {ticket.emergency_reason || '사유가 작성되지 않았습니다.'}
-                    </p>
+                {(profile?.role === 'ADMIN' || profile?.role === 'STAFF') && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" className="h-10 px-6 rounded-xl border-zinc-200 font-black text-xs text-zinc-600 hover:bg-zinc-50 transition-all">
+                      연기 요청
+                    </Button>
+                    <Button className="h-10 px-6 rounded-xl bg-zinc-900 text-white font-black text-xs hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-100">
+                      완료 요청
+                    </Button>
                   </div>
                 )}
+              </div>
+              
+              <div className="space-y-2">
+                <div className="relative h-3 w-full bg-zinc-100 rounded-full overflow-hidden">
+                  <div 
+                    className={cn("absolute left-0 top-0 h-full transition-all duration-1000 ease-out", progressInfo.color)}
+                    style={{ width: `${progressInfo.percentage}%` }}
+                  />
+                  <div className="absolute inset-0 flex justify-evenly pointer-events-none">
+                    <div className="h-full w-px bg-white/50" />
+                    <div className="h-full w-px bg-white/50" />
+                    <div className="h-full w-px bg-white/50" />
+                  </div>
+                </div>
+                <div className="flex justify-between px-1">
+                  {['대기', '접수', '진행', '완료'].map((step, i) => (
+                    <span key={i} className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest">
+                      {step}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 2. 업무 내용 및 착수 메시지 (동일 중요도 구성) */}
+          <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2rem] overflow-hidden bg-white">
+            <CardContent className="p-0">
+              {/* 본문 영역 */}
+              <div className="p-10 space-y-8">
+                <div className="space-y-4">
+                  <h1 className="text-2xl font-black text-zinc-900 tracking-tighter leading-tight">
+                    {ticket.title}
+                  </h1>
+                  <div className="min-h-[200px] text-zinc-900 font-black text-lg leading-relaxed whitespace-pre-wrap">
+                    {ticket.description || '상세 내용이 없습니다.'}
+                  </div>
+                </div>
 
                 {/* 첨부 파일 */}
-                <div className="space-y-4 pt-4">
+                <div className="space-y-4">
                   <div className="flex items-center gap-2 text-[#9CA3AF]">
                     <FileText className="h-5 w-5" />
                     <span className="text-xs font-black uppercase tracking-widest">최초 첨부 파일 ({ticket.file_urls?.length || 0})</span>
@@ -393,50 +384,168 @@ export default function TicketDetailPage() {
                           href={url} 
                           target="_blank" 
                           rel="noreferrer"
-                          className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-zinc-50 rounded-xl border border-zinc-200 transition-all group shadow-sm"
+                          className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
                         >
                           <FileText className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
                           <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">첨부파일 {i + 1}</span>
                         </a>
                       ))
                     ) : (
-                      <p className="text-xs font-black text-[#9CA3AF] italic ml-1">첨부된 파일이 없습니다.</p>
+                      <p className="text-xs font-black text-[#9CA3AF] ml-1">첨부된 파일이 없습니다.</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <Separator className="bg-zinc-100" />
-
-              {/* 3. 상세 정보 섹션 (상대적으로 덜 중요한 정보) */}
-              <div className="grid grid-cols-3 gap-8 px-2">
-                <div className="space-y-2">
-                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">프로젝트 및 고객사</p>
-                  <p className="text-sm font-black text-zinc-600">{ticket.project?.name || '---'}</p>
-                  <p className="text-xs font-bold text-[#9CA3AF]">{ticket.requester?.customer?.company_name || '---'}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">요청자 정보</p>
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "h-6 w-6 rounded-lg flex items-center justify-center text-[12px] font-black",
-                      roleBgMap[ticket.requester?.role] || "bg-zinc-100 text-zinc-400"
-                    )}>
-                      {ticket.requester?.full_name?.[0]}
+              {/* 조치 계획 (업무 본문과 동일 위계 구성) */}
+              {startWorkMessage && (
+                <div className="bg-white border-t border-zinc-100 p-10 space-y-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="space-y-1">
+                        <h3 className="text-xl font-black text-zinc-900 tracking-tighter">조치 계획</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={cn("px-2 py-0 rounded-md text-[10px] font-black uppercase border-2", roleColorMap[startWorkMessage.sender?.role])}>
+                            {startWorkMessage.sender?.role}
+                          </Badge>
+                          <span className="text-xs font-black text-zinc-500">{startWorkMessage.sender?.full_name}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm font-black text-zinc-600">{ticket.requester?.full_name || '---'}</p>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">작성일시</p>
+                      <p className="text-xs font-bold text-zinc-900">
+                        {format(new Date(startWorkMessage.created_at), 'yyyy.MM.dd HH:mm')}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs font-bold text-[#9CA3AF]">등록일: {format(new Date(ticket.created_at), 'yyyy.MM.dd')}</p>
+
+                  <div className="min-h-[150px] text-zinc-900 font-black text-lg leading-relaxed whitespace-pre-wrap">
+                    {startWorkMessage.message}
+                  </div>
+
+                  {startWorkMessage.file_urls && startWorkMessage.file_urls.length > 0 && (
+                    <div className="space-y-4 pt-6 border-t border-zinc-50">
+                      <div className="flex items-center gap-2 text-[#9CA3AF]">
+                        <Paperclip className="h-4 w-4" />
+                        <span className="text-xs font-black uppercase tracking-widest">조치 관련 첨부 파일 ({startWorkMessage.file_urls.length})</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {startWorkMessage.file_urls.map((url: string, idx: number) => (
+                          <a 
+                            key={idx} 
+                            href={url} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
+                          >
+                            <Paperclip className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
+                            <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">파일 {idx + 1}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">최초 희망 종료일</p>
-                  <p className="text-sm font-black text-zinc-600 italic">
-                    {ticket.initial_end_date 
-                      ? format(new Date(ticket.initial_end_date), 'yyyy.MM.dd') 
-                      : '---'}
-                  </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 3. 부가 정보 (2x3 통합 그리드) */}
+          <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[1.5rem] overflow-hidden bg-white">
+            <CardContent className="p-0">
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                {/* 프로젝트 */}
+                <div className="p-5 flex items-center gap-4 border-b border-r border-zinc-50">
+                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
+                    <Bookmark className="h-4.5 w-4.5 text-[#9CA3AF]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">프로젝트</p>
+                    <p className="text-sm font-black text-zinc-900 leading-tight">
+                      {ticket.project?.name || '---'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 고객사 */}
+                <div className="p-5 flex items-center gap-4 border-b border-zinc-50">
+                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-4.5 w-4.5 text-[#9CA3AF]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">고객사</p>
+                    <p className="text-sm font-black text-zinc-900 leading-tight">
+                      {ticket.requester?.customer?.company_name || '---'}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* 요청자 정보 */}
+                <div className="p-5 flex items-center gap-4 border-b border-r border-zinc-50">
+                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
+                    <User className="h-4.5 w-4.5 text-[#9CA3AF]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">요청자 정보</p>
+                    <p className="text-sm font-black text-zinc-900 leading-tight">
+                      {ticket.requester?.full_name || '---'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 등록 일시 */}
+                <div className="p-5 flex items-center gap-4 border-b border-zinc-50">
+                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
+                    <Clock className="h-4.5 w-4.5 text-[#9CA3AF]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">등록 일시</p>
+                    <p className="text-sm font-black text-zinc-900 tracking-tight">
+                      {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 최초 희망 종료일 */}
+                <div className="p-5 flex items-center gap-4 border-r border-zinc-50 md:border-b-0 border-b">
+                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
+                    <CalendarIcon className="h-4.5 w-4.5 text-[#9CA3AF]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">최초 희망 종료일</p>
+                    <p className="text-sm font-black text-zinc-900 tracking-tight">
+                      {ticket.initial_end_date ? format(new Date(ticket.initial_end_date), 'yyyy.MM.dd') : '---'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 최종 확정 종료일자 */}
+                <div className="p-5 flex items-center gap-4">
+                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4.5 w-4.5 text-[#9CA3AF]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">최종 확정 종료일자</p>
+                    <p className="text-sm font-black text-zinc-900 tracking-tight">
+                      {ticket.confirmed_end_date ? format(new Date(ticket.confirmed_end_date), 'yyyy.MM.dd') : '---'}
+                    </p>
+                  </div>
                 </div>
               </div>
+
+              {/* 긴급 처리 사유 (있는 경우에만 얇게 한 줄 추가) */}
+              {ticket.is_emergency && (
+                <div className="bg-red-50/10 p-4 flex items-center gap-4 border-t border-red-50">
+                  <div className="flex-shrink-0 ml-1">
+                    <Zap className="h-3.5 w-3.5 fill-red-600 text-red-600 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3 items-center">
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">긴급 사유</p>
+                    <p className="text-xs font-bold text-zinc-900">"{ticket.emergency_reason || '사유 미작성'}"</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -447,8 +556,8 @@ export default function TicketDetailPage() {
             <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2.5rem] overflow-hidden bg-white flex flex-col h-full gap-0">
               {/* 1. 타이틀: 고정 */}
               <div className="p-8 border-b bg-zinc-50/30 flex-none">
-                <h3 className="text-xl font-black text-zinc-900 tracking-tighter italic">
-                  {ticket.status === 'ACCEPTED' ? '업무 시작 메시지 작성' : '진행 히스토리'}
+                <h3 className="text-xl font-black text-zinc-900 tracking-tighter">
+                  {ticket.status === 'ACCEPTED' ? '조치 계획 작성' : '진행 히스토리'}
                 </h3>
               </div>
               
@@ -517,18 +626,18 @@ export default function TicketDetailPage() {
                       <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <Clock className="h-8 w-8 text-zinc-200" />
                       </div>
-                      <p className="text-sm font-black text-[#9CA3AF] italic">대화 내용이 없습니다.</p>
+                      <p className="text-sm font-black text-[#9CA3AF]">대화 내용이 없습니다.</p>
                     </div>
                   )}
 
-                  {/* ACCEPTED 상태일 때 안내 메시지 및 인력 배치 폼 */}
-                  {ticket.status === 'ACCEPTED' && (
-                    <div className="space-y-8">
+                   {/* ACCEPTED 상태일 때 안내 메시지 및 인력 배치 폼 */}
+                   {ticket.status === 'ACCEPTED' && (
+                     <div className="space-y-8">
                        {/* 안내 메시지 */}
                        <div className="bg-zinc-50/50 p-6 rounded-[2rem] border border-zinc-100 text-center">
                          <p className="text-sm font-black text-[#9CA3AF] leading-relaxed">
                            업무가 접수되었습니다. <br/>
-                           실무 시작을 위한 메시지를 작성해 주세요.
+                           조치 계획을 작성해 주세요.
                          </p>
                        </div>
 
@@ -537,9 +646,9 @@ export default function TicketDetailPage() {
                          <div className="space-y-3">
                            <div className="flex items-center justify-between ml-1">
                              <label className="text-sm font-black text-zinc-700">종료일 확인 및 변경</label>
-                             <span className={cn("text-xs font-black italic", ticket.is_emergency ? "text-red-600" : "text-blue-600")}>
-                               {ticket.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
-                             </span>
+                           <span className={cn("text-xs font-black", ticket.is_emergency ? "text-red-600" : "text-blue-600")}>
+                             {ticket.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
+                           </span>
                            </div>
                            <Popover>
                              <PopoverTrigger asChild>
@@ -595,7 +704,7 @@ export default function TicketDetailPage() {
                                 )}
                               >
                                 <div className={cn(
-                                  "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic",
+                                  "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black",
                                   selectedStaffs.includes(staff.id) ? "bg-zinc-800" : "bg-zinc-100 text-[#9CA3AF]"
                                 )}>
                                   {staff.role[0]}
@@ -631,14 +740,14 @@ export default function TicketDetailPage() {
                       ))}
                     </div>
                   )}
-                  <form onSubmit={handleAddComment} className="space-y-4">
-                    <div className="relative bg-white rounded-[1.5rem] border border-zinc-200 shadow-sm focus-within:ring-2 focus-within:ring-zinc-900 transition-all">
-                      <Textarea 
-                        placeholder={ticket.status === 'ACCEPTED' ? "실무 착수 메시지를 입력하세요..." : "댓글을 입력하세요..."}
-                        className="min-h-[100px] border-none shadow-none focus-visible:ring-0 p-5 font-black text-sm"
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                      />
+                   <form onSubmit={handleAddComment} className="space-y-4">
+                     <div className="relative bg-white rounded-[1.5rem] border border-zinc-200 shadow-sm focus-within:ring-2 focus-within:ring-zinc-900 transition-all">
+                       <Textarea 
+                         placeholder={ticket.status === 'ACCEPTED' ? "조치 계획을 입력하세요..." : "댓글을 입력하세요..."}
+                         className="min-h-[100px] border-none shadow-none focus-visible:ring-0 p-5 font-black text-sm"
+                         value={comment}
+                         onChange={(e) => setComment(e.target.value)}
+                       />
                       <div className="flex items-center justify-between px-5 pb-4">
                         <div className="relative">
                           <input
