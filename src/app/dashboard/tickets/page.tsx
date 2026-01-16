@@ -669,9 +669,7 @@ export default function TicketsPage() {
                      ) : dDay !== null ? (
                        <span className={cn(
                          "font-black text-sm tracking-tighter italic",
-                         dDay < 0 ? "text-[#E53E3E]" : 
-                         dDay === 0 ? "text-[#E53E3E]" :
-                         "text-[#242F67]"
+                         dDay <= 0 ? "text-[#E53E3E]" : "text-[#9CA3AF]"
                        )}>
                          {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
                        </span>
@@ -692,7 +690,7 @@ export default function TicketsPage() {
                      </div>
                    </div>
 
-                   <p className="text-zinc-500 font-medium text-sm leading-relaxed line-clamp-2 min-h-[2.8rem]">
+                   <p className="text-zinc-500 font-medium text-base leading-relaxed line-clamp-2 min-h-[3rem]">
                      {ticket.description || '내용이 없습니다.'}
                    </p>
 

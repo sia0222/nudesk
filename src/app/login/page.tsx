@@ -51,7 +51,7 @@ export default function LoginPage() {
               />
             </div>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter text-gray-900">NuDesk</h1>
+          <h1 className="text-2xl font-black tracking-tighter text-gray-900 italic uppercase">NuDesk</h1>
           <p className="text-[#9CA3AF] font-medium">실무 참여형 스마트 관리 시스템</p>
         </div>
 

@@ -41,6 +41,21 @@ export default function TicketDetailPage() {
   const { data: ticket, isLoading, isError } = useTicket(id as string)
   const { data: projectStaffs } = useProjectStaffs(ticket?.project_id)
 
+  // 실무 착수 메시지 추출 (운영진이 작성한 첫 번째 메시지)
+  const startWorkMessage = useMemo(() => {
+    if (!ticket?.chats || ticket.chats.length === 0) return null;
+    return ticket.chats.find((chat: any) => 
+      ['MASTER', 'ADMIN', 'STAFF'].includes(chat.sender?.role)
+    );
+  }, [ticket?.chats]);
+
+  // 우측 히스토리에서 착수 메시지 제외한 나머지 목록
+  const historyMessages = useMemo(() => {
+    if (!ticket?.chats) return [];
+    if (!startWorkMessage) return ticket.chats;
+    return ticket.chats.filter((chat: any) => chat.id !== startWorkMessage.id);
+  }, [ticket?.chats, startWorkMessage]);
+
   const dateLimits = useMemo(() => {
     return {
       standardMin: getBusinessDate(3),
@@ -246,10 +261,10 @@ export default function TicketDetailPage() {
         description="접수된 업무의 상세 내용과 진행 상황을 확인합니다."
         leftElement={
           <Button 
-            className="h-16 w-16 rounded-3xl bg-zinc-900 text-white shadow-xl shadow-zinc-100 transition-transform hover:scale-105 duration-300 p-0" 
+            className="h-16 w-16 rounded-3xl bg-zinc-900 text-white shadow-xl shadow-zinc-100 transition-transform hover:scale-105 hover:bg-zinc-900 duration-300 p-0" 
             onClick={() => router.back()}
           >
-            <ArrowLeft className="h-9 w-9" strokeWidth={3} />
+            <ArrowLeft className="!h-7 !w-7" strokeWidth={3} />
           </Button>
         }
       />
@@ -287,25 +302,63 @@ export default function TicketDetailPage() {
                 </div>
               </div>
 
-              {/* 2. 업무 내용 섹션 (제목, 내용, 첨부파일) */}
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-black text-zinc-900 tracking-tighter leading-tight">
-                    {ticket.title}
-                  </h1>
-                  <div className="min-h-[300px] text-zinc-900 font-black text-xl leading-relaxed whitespace-pre-wrap bg-zinc-50/30 p-8 rounded-[2rem] border border-dashed border-zinc-200">
-                    {ticket.description || '상세 내용이 없습니다.'}
+              {/* 2. 업무 내용 및 착수 메시지 섹션 */}
+              <div className="space-y-8 bg-zinc-50/30 p-8 rounded-[2.5rem] border border-zinc-100">
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <h1 className="text-2xl font-black text-zinc-900 tracking-tighter leading-tight">
+                      {ticket.title}
+                    </h1>
+                    <div className="min-h-[200px] text-zinc-900 font-black text-lg leading-relaxed whitespace-pre-wrap">
+                      {ticket.description || '상세 내용이 없습니다.'}
+                    </div>
                   </div>
+
+                  {/* 착수 메시지 (있는 경우 내용 하단에 배치) */}
+                  {startWorkMessage && (
+                    <div className="pt-8 border-t border-zinc-200/60 space-y-4">
+                      <div className="flex items-center gap-2 text-[#3B82F6]">
+                        <div className="h-2 w-2 rounded-full bg-[#3B82F6] animate-pulse" />
+                        <span className="text-xs font-black uppercase tracking-widest">실무 착수 메시지</span>
+                      </div>
+                      <div className="bg-[#3B82F6]/5 p-6 rounded-2xl border border-[#3B82F6]/10 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={cn("text-xs font-black uppercase tracking-widest", roleColorMap[startWorkMessage.sender?.role])}>
+                              {startWorkMessage.sender?.role}
+                            </span>
+                            <span className="text-xs font-black text-zinc-900">{startWorkMessage.sender?.full_name}</span>
+                          </div>
+                          <span className="text-xs font-bold text-[#9CA3AF] italic">
+                            {format(new Date(startWorkMessage.created_at), 'yyyy.MM.dd HH:mm')}
+                          </span>
+                        </div>
+                        <p className="text-lg font-black text-zinc-900 leading-relaxed whitespace-pre-wrap">
+                          {startWorkMessage.message}
+                        </p>
+                        {startWorkMessage.file_urls && startWorkMessage.file_urls.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            {startWorkMessage.file_urls.map((url: string, idx: number) => (
+                              <a key={idx} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-white border border-zinc-100 rounded-lg text-xs font-black text-[#9CA3AF] hover:text-zinc-900">
+                                <Paperclip className="h-3.5 w-3.5" />
+                                파일 {idx + 1}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* 긴급 처리 사유 (있을 경우 내용 하단에 배치) */}
+                {/* 긴급 처리 사유 */}
                 {ticket.is_emergency && (
-                  <div className="bg-red-50/50 p-8 rounded-[2rem] border border-red-100 space-y-3">
+                  <div className="bg-red-50/50 p-6 rounded-2xl border border-red-100 space-y-3">
                     <div className="flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-red-600 fill-red-600 animate-pulse" />
-                      <span className="text-sm font-black text-red-600 uppercase tracking-widest">긴급 처리 사유</span>
+                      <Zap className="h-4 w-4 text-red-600 fill-red-600 animate-pulse" />
+                      <span className="text-xs font-black text-red-600 uppercase tracking-widest">긴급 처리 사유</span>
                     </div>
-                    <p className="text-lg font-black text-zinc-900 leading-relaxed">
+                    <p className="text-base font-bold text-zinc-900 leading-relaxed">
                       {ticket.emergency_reason || '사유가 작성되지 않았습니다.'}
                     </p>
                   </div>
@@ -315,7 +368,7 @@ export default function TicketDetailPage() {
                 <div className="space-y-4 pt-4">
                   <div className="flex items-center gap-2 text-[#9CA3AF]">
                     <FileText className="h-5 w-5" />
-                    <span className="text-xs font-black uppercase tracking-widest">첨부 파일 ({ticket.file_urls?.length || 0})</span>
+                    <span className="text-xs font-black uppercase tracking-widest">최초 첨부 파일 ({ticket.file_urls?.length || 0})</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {ticket.file_urls && ticket.file_urls.length > 0 ? (
@@ -325,14 +378,14 @@ export default function TicketDetailPage() {
                           href={url} 
                           target="_blank" 
                           rel="noreferrer"
-                          className="flex items-center gap-3 px-5 py-4 bg-white hover:bg-zinc-50 rounded-2xl border border-zinc-200 transition-all group shadow-sm"
+                          className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-zinc-50 rounded-xl border border-zinc-200 transition-all group shadow-sm"
                         >
-                          <FileText className="h-5 w-5 text-[#9CA3AF] group-hover:text-zinc-900" />
-                          <span className="text-sm font-black text-zinc-600 group-hover:text-zinc-900">첨부파일 {i + 1}</span>
+                          <FileText className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
+                          <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">첨부파일 {i + 1}</span>
                         </a>
                       ))
                     ) : (
-                      <p className="text-sm font-black text-[#9CA3AF] italic ml-1">첨부된 파일이 없습니다.</p>
+                      <p className="text-xs font-black text-[#9CA3AF] italic ml-1">첨부된 파일이 없습니다.</p>
                     )}
                   </div>
                 </div>
@@ -386,38 +439,62 @@ export default function TicketDetailPage() {
               <ScrollArea className="flex-1 p-8">
                 <div className="space-y-8">
                   {/* 진행 히스토리: ACCEPTED 상태가 아닐 때만 표시 */}
-                  {ticket.status !== 'ACCEPTED' && ticket.chats && ticket.chats.length > 0 ? (
-                    ticket.chats.map((chat: any) => (
-                      <div key={chat.id} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                  {ticket.status !== 'ACCEPTED' && historyMessages && historyMessages.length > 0 ? (
+                    historyMessages.map((chat: any) => {
+                      const isMyChat = chat.sender?.id === session?.userId;
+                      return (
+                        <div key={chat.id} className={cn(
+                          "flex flex-col gap-2 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300",
+                          isMyChat ? "ml-auto items-end" : "mr-auto items-start"
+                        )}>
+                          <div className={cn("flex items-center gap-2 mb-1", isMyChat ? "flex-row-reverse" : "flex-row")}>
                             <span className={cn(
-                              "text-xs font-black",
+                              "text-xs font-black uppercase tracking-widest",
                               roleColorMap[chat.sender?.role] || "text-zinc-500"
                             )}>
                               {chat.sender?.role}
                             </span>
-                            <span className="text-sm font-black text-zinc-900">{chat.sender?.full_name}</span>
+                            <span className="text-xs font-black text-zinc-900">{chat.sender?.full_name}</span>
+                            <span className="text-xs font-bold text-[#9CA3AF] opacity-60">
+                              {format(new Date(chat.created_at), 'MM.dd HH:mm')}
+                            </span>
                           </div>
-                        <span className="text-xs font-black text-[#9CA3AF]">{format(new Date(chat.created_at), 'yyyy.MM.dd HH:mm')}</span>
-                      </div>
-                      {chat.message && (
-                        <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 text-sm font-black text-zinc-700 whitespace-pre-wrap">
-                          {chat.message}
+
+                          {chat.message && (
+                            <div className={cn(
+                              "p-4 rounded-[1.5rem] text-sm font-black whitespace-pre-wrap shadow-sm border transition-all",
+                              isMyChat 
+                                ? "bg-zinc-900 text-white border-zinc-900 rounded-tr-none" 
+                                : "bg-white text-zinc-700 border-zinc-100 rounded-tl-none"
+                            )}>
+                              {chat.message}
+                            </div>
+                          )}
+
+                          {chat.file_urls && chat.file_urls.length > 0 && (
+                            <div className={cn("flex flex-wrap gap-2 mt-1", isMyChat ? "justify-end" : "justify-start")}>
+                              {chat.file_urls.map((url: string, idx: number) => (
+                                <a 
+                                  key={idx} 
+                                  href={url} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className={cn(
+                                    "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black transition-all border shadow-sm group",
+                                    isMyChat 
+                                      ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700" 
+                                      : "bg-zinc-50 border-zinc-100 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+                                  )}
+                                >
+                                  <Paperclip className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                                  파일 {idx + 1}
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {chat.file_urls && chat.file_urls.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {chat.file_urls.map((url: string, idx: number) => (
-                              <a key={idx} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-100 rounded-lg text-[10px] font-black text-[#9CA3AF] hover:text-zinc-900">
-                                <Paperclip className="h-3 w-3" />
-                                파일 {idx + 1}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))
+                      )
+                    })
                   ) : ticket.status !== 'ACCEPTED' && (
                     <div className="text-center py-10">
                       <p className="text-sm font-black text-[#9CA3AF] italic">히스토리가 없습니다.</p>

@@ -37,8 +37,8 @@ export default function AdminDashboardPage() {
           <ShieldCheck className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">시스템 관리</h1>
-          <p className="text-muted-foreground">인력 배치 및 시스템 전역 설정을 관리합니다.</p>
+          <h1 className="text-2xl font-black tracking-tight text-zinc-900 italic uppercase">시스템 관리</h1>
+          <p className="text-muted-foreground font-bold mt-1">인력 배치 및 시스템 전역 설정을 관리합니다.</p>
         </div>
       </div>
 
