@@ -362,6 +362,13 @@ export default function TicketDetailPage() {
               {/* 본문 영역 */}
               <div className="p-10 space-y-8">
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-zinc-500">{ticket.requester?.customer?.company_name || '---'}</span>
+                    <span className="text-xs font-black text-zinc-300">|</span>
+                    <span className="text-xs font-bold text-zinc-400">
+                      {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm')}
+                    </span>
+                  </div>
                   <h1 className="text-2xl font-black text-zinc-900 tracking-tighter leading-tight">
                     {ticket.title}
                   </h1>
@@ -370,53 +377,35 @@ export default function TicketDetailPage() {
                   </div>
                 </div>
 
-                {/* 첨부 파일 */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-[#9CA3AF]">
-                    <FileText className="h-5 w-5" />
-                    <span className="text-xs font-black uppercase tracking-widest">최초 첨부 파일 ({ticket.file_urls?.length || 0})</span>
-                  </div>
+                {/* 첨부 파일 (파일이 있는 경우에만 목록 노출) */}
+                {ticket.file_urls && ticket.file_urls.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {ticket.file_urls && ticket.file_urls.length > 0 ? (
-                      ticket.file_urls.map((url: string, i: number) => (
-                        <a 
-                          key={i} 
-                          href={url} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
-                        >
-                          <FileText className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
-                          <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">첨부파일 {i + 1}</span>
-                        </a>
-                      ))
-                    ) : (
-                      <p className="text-xs font-black text-[#9CA3AF] ml-1">첨부된 파일이 없습니다.</p>
-                    )}
+                    {ticket.file_urls.map((url: string, i: number) => (
+                      <a 
+                        key={i} 
+                        href={url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
+                      >
+                        <FileText className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
+                        <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">첨부파일 {i + 1}</span>
+                      </a>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
 
               {/* 조치 계획 (업무 본문과 동일 위계 구성) */}
               {startWorkMessage && (
-                <div className="bg-white border-t border-zinc-100 p-10 space-y-8">
+                <div className="bg-white border-t border-zinc-100 p-10 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="space-y-1">
-                        <h3 className="text-xl font-black text-zinc-900 tracking-tighter">조치 계획</h3>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={cn("px-2 py-0 rounded-md text-[10px] font-black uppercase border-2", roleColorMap[startWorkMessage.sender?.role])}>
-                            {startWorkMessage.sender?.role}
-                          </Badge>
-                          <span className="text-xs font-black text-zinc-500">{startWorkMessage.sender?.full_name}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">작성일시</p>
-                      <p className="text-xs font-bold text-zinc-900">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-zinc-500">{startWorkMessage.sender?.full_name}</span>
+                      <span className="text-xs font-black text-zinc-300">|</span>
+                      <span className="text-xs font-bold text-zinc-400">
                         {format(new Date(startWorkMessage.created_at), 'yyyy.MM.dd HH:mm')}
-                      </p>
+                      </span>
                     </div>
                   </div>
 
@@ -424,26 +413,21 @@ export default function TicketDetailPage() {
                     {startWorkMessage.message}
                   </div>
 
+                  {/* 조치 관련 첨부 파일 (파일이 있는 경우에만 목록 노출) */}
                   {startWorkMessage.file_urls && startWorkMessage.file_urls.length > 0 && (
-                    <div className="space-y-4 pt-6 border-t border-zinc-50">
-                      <div className="flex items-center gap-2 text-[#9CA3AF]">
-                        <Paperclip className="h-4 w-4" />
-                        <span className="text-xs font-black uppercase tracking-widest">조치 관련 첨부 파일 ({startWorkMessage.file_urls.length})</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {startWorkMessage.file_urls.map((url: string, idx: number) => (
-                          <a 
-                            key={idx} 
-                            href={url} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
-                          >
-                            <Paperclip className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
-                            <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">파일 {idx + 1}</span>
-                          </a>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-2 pt-6 border-t border-zinc-50">
+                      {startWorkMessage.file_urls.map((url: string, idx: number) => (
+                        <a 
+                          key={idx} 
+                          href={url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="flex items-center gap-3 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 rounded-xl border border-zinc-100 transition-all group"
+                        >
+                          <Paperclip className="h-4 w-4 text-[#9CA3AF] group-hover:text-zinc-900" />
+                          <span className="text-xs font-black text-zinc-600 group-hover:text-zinc-900">파일 {idx + 1}</span>
+                        </a>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -451,7 +435,7 @@ export default function TicketDetailPage() {
             </CardContent>
           </Card>
 
-          {/* 3. 부가 정보 (2x3 통합 그리드) */}
+          {/* 3. 부가 정보 (2x2 통합 그리드) */}
           <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[1.5rem] overflow-hidden bg-white">
             <CardContent className="p-0">
               <div className="grid grid-cols-1 md:grid-cols-2">
@@ -468,21 +452,8 @@ export default function TicketDetailPage() {
                   </div>
                 </div>
 
-                {/* 고객사 */}
-                <div className="p-5 flex items-center gap-4 border-b border-zinc-50">
-                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-4.5 w-4.5 text-[#9CA3AF]" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">고객사</p>
-                    <p className="text-sm font-black text-zinc-900 leading-tight">
-                      {ticket.requester?.customer?.company_name || '---'}
-                    </p>
-                  </div>
-                </div>
-                
                 {/* 요청자 정보 */}
-                <div className="p-5 flex items-center gap-4 border-b border-r border-zinc-50">
+                <div className="p-5 flex items-center gap-4 border-b border-zinc-50">
                   <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
                     <User className="h-4.5 w-4.5 text-[#9CA3AF]" />
                   </div>
@@ -490,19 +461,6 @@ export default function TicketDetailPage() {
                     <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">요청자 정보</p>
                     <p className="text-sm font-black text-zinc-900 leading-tight">
                       {ticket.requester?.full_name || '---'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 등록 일시 */}
-                <div className="p-5 flex items-center gap-4 border-b border-zinc-50">
-                  <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
-                    <Clock className="h-4.5 w-4.5 text-[#9CA3AF]" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">등록 일시</p>
-                    <p className="text-sm font-black text-zinc-900 tracking-tight">
-                      {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm')}
                     </p>
                   </div>
                 </div>
@@ -554,14 +512,7 @@ export default function TicketDetailPage() {
         {showRightArea && (
           <div className="lg:col-span-5 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500 sticky top-24 h-[calc(100vh-300px)]">
             <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2.5rem] overflow-hidden bg-white flex flex-col h-full gap-0">
-              {/* 1. 타이틀: 고정 */}
-              <div className="p-8 border-b bg-zinc-50/30 flex-none">
-                <h3 className="text-xl font-black text-zinc-900 tracking-tighter">
-                  {ticket.status === 'ACCEPTED' ? '조치 계획 작성' : '진행 히스토리'}
-                </h3>
-              </div>
-              
-              {/* 2. 내용: 남은 높이 차지 및 스크롤 */}
+              {/* 1. 내용: 남은 높이 차지 및 스크롤 */}
               <ScrollArea className="flex-1 min-h-0">
                 <div ref={scrollRef} className="p-8 space-y-8">
                   {/* 진행 히스토리: ACCEPTED 상태가 아닐 때만 표시 */}
