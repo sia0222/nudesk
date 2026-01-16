@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { Briefcase, Clock, Calendar as CalendarIcon, User, Building2, FileText, Send, Paperclip, X, Check, Loader2, Zap, ArrowLeft, Quote, Bookmark, Star, Mail, CheckCircle2 } from 'lucide-react'
-import { useTicket, useAddComment, useAssignStaffAndAccept, useProjectStaffs, useStartWork, useUpdateTicketStatus } from "@/hooks/use-tickets"
+import { useTicket, useAddComment, useAssignStaffAndAccept, useProjectStaffs, useStartWork, useUpdateTicketStatus, useRequestDelay, useApproveDelay, useRejectDelay } from "@/hooks/use-tickets"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { format, startOfDay, isWeekend } from "date-fns"
 import { ko } from "date-fns/locale"
@@ -51,7 +52,7 @@ export default function TicketDetailPage() {
       case 'IN_PROGRESS': return { percentage: 75, label: '75%', color: 'bg-[#3B82F6]' };
       case 'DELAYED': return { percentage: 75, label: '75%', color: 'bg-[#E53E3E]' };
       case 'REQUESTED': return { percentage: 85, label: '85%', color: 'bg-[#242F67]' };
-      case 'COMPLETED': return { percentage: 100, label: '100%', color: 'bg-zinc-400' };
+      case 'COMPLETED': return { percentage: 100, label: '100%', color: 'bg-[#9CA3AF]' };
       default: return { percentage: 0, label: '0%', color: 'bg-zinc-200' };
     }
   }, [ticket?.status]);
@@ -97,6 +98,9 @@ export default function TicketDetailPage() {
   const assignStaffMutation = useAssignStaffAndAccept()
   const startWorkMutation = useStartWork()
   const updateStatusMutation = useUpdateTicketStatus()
+  const requestDelayMutation = useRequestDelay()
+  const approveDelayMutation = useApproveDelay()
+  const rejectDelayMutation = useRejectDelay()
   
   // ADMIN/STAFF 자동 접수 및 초기 종료일 설정
   useEffect(() => {
@@ -114,6 +118,10 @@ export default function TicketDetailPage() {
   const [selectedEndDate, setSelectedEndDate] = useState<Date | undefined>(undefined)
   const [files, setFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [isDelayDialogOpen, setIsDelayDialogOpen] = useState(false)
+  const [delayRequestDate, setDelayRequestDate] = useState<Date | undefined>(undefined)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [isRejecting, setIsRejecting] = useState(false)
   
   // 최초 희망 종료일이 오늘이거나 과거인지 확인
   const isInitialDatePassedOrToday = useMemo(() => {
@@ -239,6 +247,46 @@ export default function TicketDetailPage() {
     )
   }
 
+  const handleRequestDelay = () => {
+    if (!delayRequestDate) {
+      alert('연기할 날짜를 선택해 주세요.')
+      return
+    }
+    requestDelayMutation.mutate({
+      ticketId: id as string,
+      requestedDate: format(delayRequestDate, 'yyyy-MM-dd')
+    }, {
+      onSuccess: () => {
+        setIsDelayDialogOpen(false)
+        setDelayRequestDate(undefined)
+      }
+    })
+  }
+
+  const handleApproveDelay = () => {
+    if (!ticket?.delay_requested_date) return
+    approveDelayMutation.mutate({
+      ticketId: id as string,
+      delayedDate: ticket.delay_requested_date
+    })
+  }
+
+  const handleRejectDelay = () => {
+    if (!rejectionReason.trim()) {
+      alert('반려 사유를 입력해 주세요.')
+      return
+    }
+    rejectDelayMutation.mutate({
+      ticketId: id as string,
+      reason: rejectionReason
+    }, {
+      onSuccess: () => {
+        setIsRejecting(false)
+        setRejectionReason('')
+      }
+    })
+  }
+
   if (isLoading) {
     return (
       <PageContainer>
@@ -261,13 +309,20 @@ export default function TicketDetailPage() {
   }
 
   const statusMap: any = {
-    'WAITING': { label: '대기', color: 'border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5' },
-    'ACCEPTED': { label: '접수', color: 'border-[#82B326] text-[#82B326] bg-[#82B326]/5' },
-    'IN_PROGRESS': { label: '진행', color: 'border-[#3B82F6] text-[#3B82F6] bg-[#3B82F6]/5' },
-    'DELAYED': { label: '지연', color: 'border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5' },
-    'REQUESTED': { label: '요청', color: 'border-[#242F67] text-[#242F67] bg-[#242F67]/5' },
-    'COMPLETED': { label: '완료', color: 'border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5' },
+    'WAITING': { label: '대기', color: 'border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5', hex: '#F6AD55' },
+    'ACCEPTED': { label: '접수', color: 'border-[#82B326] text-[#82B326] bg-[#82B326]/5', hex: '#82B326' },
+    'IN_PROGRESS': { label: '진행', color: 'border-[#3B82F6] text-[#3B82F6] bg-[#3B82F6]/5', hex: '#3B82F6' },
+    'DELAYED': { label: '지연', color: 'border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5', hex: '#E53E3E' },
+    'REQUESTED': { label: '요청', color: 'border-[#242F67] text-[#242F67] bg-[#242F67]/5', hex: '#242F67' },
+    'COMPLETED': { label: '완료', color: 'border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5', hex: '#9CA3AF' },
   }
+
+  const steps = [
+    { label: '대기', statuses: ['WAITING'] },
+    { label: '접수', statuses: ['ACCEPTED'] },
+    { label: '진행', statuses: ['IN_PROGRESS', 'DELAYED', 'REQUESTED'] },
+    { label: '완료', statuses: ['COMPLETED'] }
+  ];
 
   const roleColorMap: any = {
     'MASTER': 'text-[#242F67]',
@@ -287,6 +342,7 @@ export default function TicketDetailPage() {
   const showRightArea = !(profile?.role === 'CUSTOMER' && (ticket.status === 'WAITING' || ticket.status === 'ACCEPTED'))
 
   return (
+    <>
     <PageContainer>
       <PageHeader
         title="업무 상세"
@@ -301,11 +357,70 @@ export default function TicketDetailPage() {
         }
       />
 
+      {/* 연기 요청 알림 (고객용) - 타이틀 구역 하위로 이동 */}
+      {profile?.role === 'CUSTOMER' && ticket.delay_status === 'PENDING' && (
+        <Card className="mt-8 border-blue-100 bg-blue-50/20 shadow-[0_8px_30px_rgba(59,130,246,0.05)] rounded-[2rem] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+          <CardContent className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5 text-center md:text-left">
+              <div className="h-14 w-14 rounded-2xl bg-[#3B82F6] flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-100">
+                <Clock className="h-7 w-7 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-zinc-900">업무 연기 승인 요청이 도착했습니다</h3>
+                <p className="text-sm font-bold text-zinc-500">
+                  기존 종료일: <span className="text-zinc-900 line-through decoration-zinc-300 mr-2">{ticket.confirmed_end_date ? format(new Date(ticket.confirmed_end_date), 'yyyy.MM.dd') : format(new Date(ticket.initial_end_date), 'yyyy.MM.dd')}</span>
+                  희망 연기일: <span className="text-[#3B82F6] font-black">{format(new Date(ticket.delay_requested_date), 'yyyy.MM.dd')}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <Button 
+                variant="outline" 
+                className="flex-1 md:flex-none h-12 px-8 rounded-xl border-zinc-200 font-black text-zinc-600 hover:bg-white hover:text-red-500 hover:border-red-100 transition-all"
+                onClick={() => setIsRejecting(true)}
+              >
+                반려
+              </Button>
+              <Button 
+                className="flex-1 md:flex-none h-12 px-10 rounded-xl bg-[#3B82F6] text-white font-black hover:bg-blue-600 shadow-lg shadow-blue-100 transition-all"
+                onClick={handleApproveDelay}
+                disabled={approveDelayMutation.isPending}
+              >
+                {approveDelayMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "승인"}
+              </Button>
+            </div>
+          </CardContent>
+          {isRejecting && (
+            <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+              <div className="p-6 bg-white rounded-2xl border border-blue-50 space-y-4">
+                <label className="text-sm font-black text-zinc-900">반려 사유를 작성해 주세요</label>
+                <Textarea 
+                  placeholder="반려 사유를 입력하세요..." 
+                  className="min-h-[100px] rounded-xl border-zinc-100 focus-visible:ring-blue-500 font-bold"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" className="h-10 px-6 rounded-xl font-black text-zinc-400" onClick={() => setIsRejecting(false)}>취소</Button>
+                  <Button 
+                    className="h-10 px-8 rounded-xl bg-red-500 text-white font-black hover:bg-red-600 shadow-lg shadow-red-100"
+                    onClick={handleRejectDelay}
+                    disabled={rejectDelayMutation.isPending}
+                  >
+                    {rejectDelayMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "반려 확정"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
         {/* 정보 영역 (좌측) */}
         <div className={cn(
           "space-y-6 transition-all duration-500",
-          !showRightArea ? "lg:col-span-12 max-w-5xl mx-auto" : "lg:col-span-7"
+          !showRightArea ? "lg:col-span-12" : "lg:col-span-7"
         )}>
           {/* 1. 진행률 섹션 */}
           <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2rem] overflow-hidden bg-white">
@@ -316,16 +431,29 @@ export default function TicketDetailPage() {
                   <div className="flex items-center gap-3">
                     <h2 className="text-xl font-black text-zinc-900 tracking-tighter">{progressInfo.percentage}%</h2>
                     <span className="text-xl font-black text-zinc-200 tracking-tighter">/</span>
-                    <span className="text-xl font-black text-[#3B82F6] tracking-tighter">
+                    <span 
+                      className="text-xl font-black tracking-tighter"
+                      style={{ color: statusMap[ticket.status].hex }}
+                    >
                       {statusMap[ticket.status].label}
                     </span>
                   </div>
                 </div>
-                {(profile?.role === 'ADMIN' || profile?.role === 'STAFF') && (
+                {(profile?.role === 'ADMIN' || profile?.role === 'STAFF') && 
+                 !['WAITING', 'ACCEPTED', 'COMPLETED'].includes(ticket.status) && (
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" className="h-10 px-6 rounded-xl border-zinc-200 font-black text-xs text-zinc-900 hover:bg-zinc-50 transition-all">
-                      연기 요청
-                    </Button>
+                    {ticket.delay_status === null && (
+                      <Button 
+                        variant="outline" 
+                        className="h-10 px-6 rounded-xl border-zinc-200 font-black text-xs text-zinc-900 hover:bg-zinc-50 transition-all"
+                        onClick={() => {
+                          setDelayRequestDate(undefined)
+                          setIsDelayDialogOpen(true)
+                        }}
+                      >
+                        연기 요청
+                      </Button>
+                    )}
                     <Button className="h-10 px-6 rounded-xl bg-zinc-900 text-white font-black text-xs hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-100">
                       완료 요청
                     </Button>
@@ -346,11 +474,21 @@ export default function TicketDetailPage() {
                   </div>
                 </div>
                 <div className="flex justify-between px-1">
-                  {['대기', '접수', '진행', '완료'].map((step, i) => (
-                    <span key={i} className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest">
-                      {step}
-                    </span>
-                  ))}
+                  {steps.map((step, i) => {
+                    const isActive = step.statuses.includes(ticket.status);
+                    return (
+                      <span 
+                        key={i} 
+                        className={cn(
+                          "text-[10px] font-black uppercase tracking-widest transition-colors duration-300",
+                          isActive ? "opacity-100" : "text-[#9CA3AF] opacity-50"
+                        )}
+                        style={isActive ? { color: statusMap[ticket.status].hex } : {}}
+                      >
+                        {step.label}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>
@@ -447,6 +585,24 @@ export default function TicketDetailPage() {
                   <div className="h-3 w-px bg-red-200" />
                   <p className="text-base font-bold text-zinc-900 line-clamp-1">
                     "{ticket.emergency_reason || '사유가 작성되지 않았습니다.'}"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 연기 요청 반려 사유 섹션 */}
+          {ticket.delay_status === 'REJECTED' && ticket.delay_rejection_reason && (
+            <Card className="border border-orange-100 bg-orange-50/5 shadow-[0_8px_30px_rgba(249,115,22,0.02)] rounded-[1.5rem] overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-9 w-9 rounded-xl bg-white border border-orange-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <X className="h-4.5 w-4.5 text-orange-600" />
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest flex-shrink-0">연기요청 반려</span>
+                  <div className="h-3 w-px bg-orange-200" />
+                  <p className="text-base font-bold text-zinc-900">
+                    "{ticket.delay_rejection_reason}"
                   </p>
                 </div>
               </CardContent>
@@ -746,5 +902,79 @@ export default function TicketDetailPage() {
         )}
       </div>
     </PageContainer>
+    <Dialog open={isDelayDialogOpen} onOpenChange={setIsDelayDialogOpen}>
+      <DialogContent className="max-w-md rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
+        <DialogHeader className="p-8 pb-0">
+          <DialogTitle className="text-xl font-black text-zinc-900">업무 연기 요청</DialogTitle>
+        </DialogHeader>
+        <div className="p-8 space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between ml-1">
+              <label className="text-sm font-black text-zinc-900">새로운 종료 희망일</label>
+              <span className="text-xs font-black text-blue-600">
+                기존: {ticket.confirmed_end_date ? format(new Date(ticket.confirmed_end_date), 'yyyy.MM.dd') : format(new Date(ticket.initial_end_date), 'yyyy.MM.dd')}
+              </span>
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full h-14 justify-start text-left font-black rounded-2xl border-zinc-200 hover:bg-zinc-50 transition-all",
+                    !delayRequestDate && "text-[#9CA3AF]"
+                  )}
+                >
+                  <CalendarIcon className="mr-3 h-4 w-4" />
+                  {delayRequestDate ? format(delayRequestDate, "yyyy.MM.dd", { locale: ko }) : "날짜를 선택하세요"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 rounded-[1.5rem] border-none shadow-2xl" align="start">
+                <Calendar
+                  mode="single"
+                  selected={delayRequestDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      const d = startOfDay(date);
+                      const currentTarget = startOfDay(new Date(ticket.confirmed_end_date || ticket.initial_end_date));
+                      if (d.getTime() === currentTarget.getTime()) {
+                        alert('현재 종료일과 동일한 날짜로는 연기 요청을 할 수 없습니다. 더 이후의 날짜를 선택해 주세요.');
+                        return;
+                      }
+                    }
+                    setDelayRequestDate(date);
+                  }}
+                  initialFocus
+                  disabled={(date) => {
+                    const d = startOfDay(date);
+                    const currentTarget = startOfDay(new Date(ticket.confirmed_end_date || ticket.initial_end_date));
+                    // 현재 확정 종료일자보다 이후 날짜만 선택 가능 (동일한 날짜도 불가)
+                    if (d <= currentTarget) return true;
+                    if (isWeekend(d)) return true;
+                    const dateStr = format(d, 'yyyy-MM-dd');
+                    return HOLIDAYS_2026.includes(dateStr);
+                  }}
+                  locale={ko}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <p className="text-xs font-bold text-[#9CA3AF] leading-relaxed bg-zinc-50 p-4 rounded-xl">
+            * 연기 요청 시 고객의 승인이 필요합니다.<br/>
+            * 승인 전까지는 기존 종료일이 유지됩니다.
+          </p>
+        </div>
+        <DialogFooter className="p-8 pt-0 flex gap-2">
+          <Button variant="outline" className="flex-1 h-12 rounded-xl border-zinc-200 font-black" onClick={() => setIsDelayDialogOpen(false)}>취소</Button>
+          <Button 
+            className="flex-1 h-12 rounded-xl bg-zinc-900 text-white font-black hover:bg-zinc-800 shadow-lg shadow-zinc-100"
+            onClick={handleRequestDelay}
+            disabled={requestDelayMutation.isPending}
+          >
+            {requestDelayMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "연기 요청"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

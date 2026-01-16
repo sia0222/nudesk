@@ -14,7 +14,12 @@ globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/u
 ## 2. Date Management (종료일 관리)
 
 - **Initial End Date (`initial_end_date`)**: The date requested by the customer during registration. This value must **never** be modified.
-- **Confirmed End Date (`confirmed_end_date`)**: The final deadline confirmed by the Admin/Staff.
+- **Confirmed End Date (`confirmed_end_date`)**: The final deadline confirmed by the Admin/Staff when starting work.
+- **Delayed End Date (`delayed_end_date`)**: The new deadline approved by the customer after a delay request.
+- **Functional Target Date**:
+    1. If `delayed_end_date` exists (approved), use it.
+    2. Otherwise, use `confirmed_end_date`.
+    3. Otherwise, use `initial_end_date`.
 - **Visibility Rules**:
     - The "Confirm and Change End Date" section in the ticket detail page is **only visible** if the `initial_end_date` is in the future.
     - If the `initial_end_date` is **today or in the past**, the date selection UI must be hidden to prevent changes.
@@ -23,25 +28,50 @@ globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/u
         - If the Admin/Staff chose a new date, save it to `confirmed_end_date`.
         - If no date was chosen (or the UI was hidden), automatically copy `initial_end_date` to `confirmed_end_date`.
 
+## 3. Delay Request Logic (연기 요청 로직)
+
+- **Authority**: Only `ADMIN` and `STAFF` can request a delay.
+- **Visibility**: 
+    - [Delay Request] and [Completion Request] buttons are only visible when the status is `IN_PROGRESS`, `DELAYED`, or `REQUESTED`.
+    - **One-time Limitation**: The [Delay Request] button is only visible if a delay has never been requested for that ticket (`delay_status` is null). Once requested, it will never be shown again regardless of the outcome (Approved/Rejected).
+- **Workflow**:
+    1. Admin/Staff requests delay via a calendar (must be after current deadline).
+    2. Status becomes `delay_status = 'PENDING'`.
+    3. Customer sees approval/rejection buttons.
+    4. **Approval**: New date saved to `delayed_end_date`, `delay_status = 'APPROVED'`, and functional `end_date` updated.
+    5. **Rejection**: Admin/Staff must provide a reason. Reason saved to `delay_rejection_reason`, `delay_status = 'REJECTED'`.
+    6. **Display**: Rejection reason is displayed in the Left Panel below Emergency Reason.
+
 ## 3. Message Distinction (메시지 구분)
 
 - **Action Plan (조치 계획)**:
     - The first message sent by an Admin/Staff in `ACCEPTED` status.
     - Displayed in the **Left Panel** under the ticket description.
+    - Header: `Sender Name | Creation Date` (Gray: `zinc-500/400`).
+    - Body: `text-lg` (18px), black.
     - Filtered out from the general chat history in the Right Panel.
 - **General Comments**: All subsequent communication displayed in the **Right Panel** using a messenger-style UI.
+    - Font Size: `text-base` (16px) for message body.
+    - Auto-scroll to bottom on new messages.
 
 ## 4. UI/UX Standards
 
+- **Page Layout**:
+    - `PageContainer`: No vertical padding (`py-0`).
+    - Standard Border: `border-zinc-100`.
+    - Standard Shadow: `shadow-[0_8px_30px_rgba(0,0,0,0.02)]`.
 - **List Page (접수 리스트)**:
-    - Display **Initial End Date (최초 희망 종료일)** and **Confirmed End Date (확정 종료일)** in the ticket card.
-    - The "Registration Date" (`created_at`) is replaced by "Initial End Date" in the list view for better visibility of deadlines.
+    - Card layout with `line-clamp` for title (1 line) and content (2 lines).
+    - Display **Initial End Date (최초 희망 종료일)** and **Confirmed End Date (확정 종료일)**.
+- **Ticket Detail (업무 상세)**:
+    - Progress Bar: Displays `[Percentage]% / [Status Label]` (e.g., `75% / 진행`).
+    - Title Size: `text-xl font-black` (20px).
+    - Main Content Body: `text-lg` (18px).
+    - Header Meta: `Company | Date` (Gray: `zinc-500/400`).
+    - Urgent Reason: Separate small card with `Zap` icon, horizontal layout.
+    - Additional Info: 2x2 grid, gray labels, black values, no italics.
 - **Badge Styling**: Use `variant="outline"` with `border-2` and `font-black`.
 - **D-Day Color Logic**:
     - `D-1` and earlier (future): Gray (`#9CA3AF`).
     - `D-Day` and `D+` (today or past): Red (`#E53E3E`).
-- **Font Sizes**:
-    - Titles: 16px (List) / 24px (Detail).
-    - Main Content: 16px (List) / 18px (Detail).
-    - Status/Badges: 12px.
-    - Small text: Minimum 12px.
+- **Color Palette**: Use consistent `zinc-900` for all black text.

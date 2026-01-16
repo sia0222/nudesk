@@ -9,14 +9,15 @@ const processTicketStatus = (ticket: any) => {
   if (!ticket || ticket.status === 'COMPLETED') return ticket;
 
   const today = startOfDay(new Date());
-  // 확정 종료일자가 있으면 그것을 기준으로, 없으면 최초 종료일자를 기준으로 지연 여부 판단
-  const targetDate = ticket.confirmed_end_date 
-    ? startOfDay(new Date(ticket.confirmed_end_date)) 
-    : (ticket.initial_end_date ? startOfDay(new Date(ticket.initial_end_date)) : null);
+  // 연기 종료일자가 승인된 상태라면 그것을 최우선 기준으로 사용
+  // 그다음 확정 종료일자, 마지막으로 최초 종료일자를 기준으로 지연 여부 판단
+  const targetDate = ticket.delay_status === 'APPROVED' && ticket.delayed_end_date
+    ? startOfDay(new Date(ticket.delayed_end_date))
+    : (ticket.confirmed_end_date 
+        ? startOfDay(new Date(ticket.confirmed_end_date)) 
+        : (ticket.initial_end_date ? startOfDay(new Date(ticket.initial_end_date)) : null));
 
   // 규칙: [대기], [접수], [진행] 상태인데 종료일자(또는 확정종료일자)가 현재 일자보다 적을 때(지났을 때) 지연으로 변경
-  // 사용자 요청: "지연 상태는 확정종료일자가 현재 일자보다 더 많을때로 변경해주세요" 
-  // -> 현재 일자가 확정종료일자보다 더 많을 때(지났을 때) 지연 상태가 되도록 적용
   if (targetDate && (ticket.status === 'WAITING' || ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS')) {
     if (today > targetDate) {
       return {
@@ -372,6 +373,86 @@ export function useStartWork() {
     },
     onError: (error: any) => {
       toast.error(`업무 시작 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useRequestDelay() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, requestedDate }: { ticketId: string, requestedDate: string }) => {
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          delay_status: 'PENDING',
+          delay_requested_date: requestedDate,
+          delay_rejection_reason: null
+        })
+        .eq('id', ticketId)
+
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      toast.success('연기 요청이 전송되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`연기 요청 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useApproveDelay() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, delayedDate }: { ticketId: string, delayedDate: string }) => {
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          delay_status: 'APPROVED',
+          delayed_end_date: delayedDate,
+          end_date: delayedDate // 기능적으로 종료일 업데이트
+        })
+        .eq('id', ticketId)
+
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      toast.success('연기 요청이 승인되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`승인 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useRejectDelay() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, reason }: { ticketId: string, reason: string }) => {
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          delay_status: 'REJECTED',
+          delay_rejection_reason: reason
+        })
+        .eq('id', ticketId)
+
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      toast.success('연기 요청이 반려되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`반려 실패: ${error.message}`)
     }
   })
 }
