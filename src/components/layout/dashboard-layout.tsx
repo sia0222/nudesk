@@ -75,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen bg-[#E9ECEF] font-sans antialiased text-zinc-900">
-      <aside className="w-64 flex flex-col border-r bg-white shadow-sm transition-all">
+      <aside className="w-64 flex flex-col border-r border-zinc-100 bg-white shadow-[2px_0_10px_rgba(0,0,0,0.01)] transition-all">
         <div className="h-20 flex items-center px-8 gap-3 border-b">
           <div className="relative h-10 w-10 rounded-xl overflow-hidden shadow-sm border border-zinc-100 bg-white">
             <Image 
@@ -130,8 +130,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </ScrollArea>
 
         {/* 유저 프로필 카드 (권한 정보 강제 갱신) */}
-        <div className="p-4 border-t bg-zinc-50/50">
-          <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border shadow-sm">
+        <div className="p-4 border-t border-zinc-50 bg-zinc-50/50">
+          <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
             <div className={cn(
               "h-10 w-10 rounded-xl text-white flex items-center justify-center text-xs font-black italic shadow-sm",
               profile?.role === 'MASTER' ? "bg-[#242F67]" :

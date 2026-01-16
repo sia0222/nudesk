@@ -1,10 +1,10 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
-import { Briefcase, Clock, Calendar as CalendarIcon, User, Building2, FileText, Send, Paperclip, X, Check, Loader2, Zap, ArrowLeft } from 'lucide-react'
+import { Briefcase, Clock, Calendar as CalendarIcon, User, Building2, FileText, Send, Paperclip, X, Check, Loader2, Zap, ArrowLeft, Quote } from 'lucide-react'
 import { useTicket, useAddComment, useAssignStaffAndAccept, useProjectStaffs, useStartWork, useUpdateTicketStatus } from "@/hooks/use-tickets"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,6 +40,7 @@ export default function TicketDetailPage() {
 
   const { data: ticket, isLoading, isError } = useTicket(id as string)
   const { data: projectStaffs } = useProjectStaffs(ticket?.project_id)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // 실무 착수 메시지 추출 (운영진이 작성한 첫 번째 메시지)
   const startWorkMessage = useMemo(() => {
@@ -55,6 +56,21 @@ export default function TicketDetailPage() {
     if (!startWorkMessage) return ticket.chats;
     return ticket.chats.filter((chat: any) => chat.id !== startWorkMessage.id);
   }, [ticket?.chats, startWorkMessage]);
+
+  // 메시지 추가 또는 상태 변경 시 우측 히스토리 영역만 하단 이동
+  useEffect(() => {
+    if (scrollRef.current) {
+      const scrollContainer = scrollRef.current.closest('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        setTimeout(() => {
+          scrollContainer.scrollTo({
+            top: scrollContainer.scrollHeight,
+            behavior: 'smooth'
+          });
+        }, 100);
+      }
+    }
+  }, [historyMessages, ticket?.status]);
 
   const dateLimits = useMemo(() => {
     return {
@@ -85,6 +101,14 @@ export default function TicketDetailPage() {
   const [files, setFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
   
+  // 최초 희망 종료일이 오늘이거나 과거인지 확인
+  const isInitialDatePassedOrToday = useMemo(() => {
+    if (!ticket?.initial_end_date) return false;
+    const initialDate = startOfDay(new Date(ticket.initial_end_date));
+    const today = startOfDay(new Date());
+    return initialDate <= today;
+  }, [ticket?.initial_end_date]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(prev => [...prev, ...Array.from(e.target.files!)])
@@ -122,33 +146,27 @@ export default function TicketDetailPage() {
         uploadedUrls.push(publicUrl)
       }
       
-      if (ticket?.status === 'ACCEPTED') {
-        if (!selectedEndDate) {
-          alert('종료일자를 선택해 주세요.')
-          return
-        }
+       if (ticket?.status === 'ACCEPTED') {
+         // 달력에서 선택한 날짜가 있으면 사용, 없으면 최초 희망 종료일을 확정 종료일자로 자동 설정
+         const finalEndDate = selectedEndDate 
+           ? format(selectedEndDate, 'yyyy-MM-dd') 
+           : (ticket.initial_end_date ? format(new Date(ticket.initial_end_date), 'yyyy-MM-dd') : undefined);
 
-        const minDate = ticket.is_emergency ? dateLimits.emergencyMin : dateLimits.standardMin
-        if (startOfDay(selectedEndDate) < minDate) {
-          alert(`${ticket.is_emergency ? '긴급' : '일반'} 업무는 ${format(minDate, 'yyyy-MM-dd')} 이후부터 가능합니다.`)
-          return
-        }
-
-        startWorkMutation.mutate({
-          ticketId: id as string,
-          message: comment,
-          file_urls: uploadedUrls,
-          staffIds: selectedStaffs,
-          endDate: format(selectedEndDate, 'yyyy-MM-dd')
-        }, {
-          onSuccess: () => {
-            setComment('')
-            setFiles([])
-            setSelectedStaffs([])
-            setSelectedEndDate(undefined)
-          }
-        })
-      } else {
+         startWorkMutation.mutate({
+           ticketId: id as string,
+           message: comment,
+           file_urls: uploadedUrls,
+           staffIds: selectedStaffs,
+           endDate: finalEndDate
+         }, {
+           onSuccess: () => {
+             setComment('')
+             setFiles([])
+             setSelectedStaffs([])
+             setSelectedEndDate(undefined)
+           }
+         })
+       } else {
         addCommentMutation.mutate({
           ticketId: id as string,
           message: comment,
@@ -275,26 +293,26 @@ export default function TicketDetailPage() {
           "space-y-6 transition-all duration-500",
           !showRightArea ? "lg:col-span-12 max-w-4xl mx-auto" : "lg:col-span-7"
         )}>
-          <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white">
+          <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2.5rem] overflow-hidden bg-white">
             <CardContent className="p-10 space-y-10">
               {/* 1. 상태 및 확정 일정 섹션 (가장 중요) */}
               <div className="flex flex-wrap items-center justify-between gap-6">
                 <div className="space-y-3">
                   <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest ml-1">현재 상태</p>
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={cn("px-6 py-2 rounded-full font-black text-sm border-2 shadow-sm", statusMap[ticket.status].color)}>
+                    <Badge variant="outline" className={cn("px-6 py-2 rounded-full font-black text-xs border-2 shadow-sm", statusMap[ticket.status].color)}>
                       {statusMap[ticket.status].label}
                     </Badge>
                     {ticket.is_emergency && (
-                      <Badge variant="destructive" className="px-6 py-2 rounded-full font-black text-sm bg-red-600 border-none animate-pulse">
-                        URGENT
+                      <Badge variant="destructive" className="px-6 py-2 rounded-full font-black text-xs bg-red-600 border-none animate-pulse">
+                        긴급
                       </Badge>
                     )}
                   </div>
                 </div>
                 <div className="space-y-3 text-right">
                   <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest mr-1">확정 종료일자</p>
-                  <p className="text-3xl font-black text-zinc-900 italic tracking-tighter">
+                  <p className="text-base font-black text-zinc-900 italic tracking-tighter">
                     {ticket.confirmed_end_date 
                       ? format(new Date(ticket.confirmed_end_date), 'yyyy.MM.dd') 
                       : '---'}
@@ -303,7 +321,7 @@ export default function TicketDetailPage() {
               </div>
 
               {/* 2. 업무 내용 및 착수 메시지 섹션 */}
-              <div className="space-y-8 bg-zinc-50/30 p-8 rounded-[2.5rem] border border-zinc-100">
+              <div className="space-y-8 bg-zinc-50/30 rounded-[2.5rem]">
                 <div className="space-y-6">
                   <div className="space-y-4">
                     <h1 className="text-2xl font-black text-zinc-900 tracking-tighter leading-tight">
@@ -317,29 +335,26 @@ export default function TicketDetailPage() {
                   {/* 착수 메시지 (있는 경우 내용 하단에 배치) */}
                   {startWorkMessage && (
                     <div className="pt-8 border-t border-zinc-200/60 space-y-4">
-                      <div className="flex items-center gap-2 text-[#3B82F6]">
-                        <div className="h-2 w-2 rounded-full bg-[#3B82F6] animate-pulse" />
-                        <span className="text-xs font-black uppercase tracking-widest">실무 착수 메시지</span>
+                      <div className="flex items-center gap-2 text-[#9CA3AF]">
+                        <Quote className="h-5 w-5" />
+                        <span className="text-xs font-black uppercase tracking-widest">
+                          실무 착수 메시지 ({format(new Date(startWorkMessage.created_at), 'yyyy.MM.dd HH:mm')})
+                        </span>
                       </div>
-                      <div className="bg-[#3B82F6]/5 p-6 rounded-2xl border border-[#3B82F6]/10 shadow-sm space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className={cn("text-xs font-black uppercase tracking-widest", roleColorMap[startWorkMessage.sender?.role])}>
-                              {startWorkMessage.sender?.role}
-                            </span>
-                            <span className="text-xs font-black text-zinc-900">{startWorkMessage.sender?.full_name}</span>
-                          </div>
-                          <span className="text-xs font-bold text-[#9CA3AF] italic">
-                            {format(new Date(startWorkMessage.created_at), 'yyyy.MM.dd HH:mm')}
+                      <div className="space-y-3 ml-1">
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-xs font-black uppercase tracking-widest", roleColorMap[startWorkMessage.sender?.role])}>
+                            {startWorkMessage.sender?.role}
                           </span>
+                          <span className="text-xs font-black text-zinc-900">{startWorkMessage.sender?.full_name}</span>
                         </div>
-                        <p className="text-lg font-black text-zinc-900 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-base font-black text-zinc-900 leading-relaxed whitespace-pre-wrap">
                           {startWorkMessage.message}
                         </p>
                         {startWorkMessage.file_urls && startWorkMessage.file_urls.length > 0 && (
                           <div className="flex flex-wrap gap-2 pt-2">
                             {startWorkMessage.file_urls.map((url: string, idx: number) => (
-                              <a key={idx} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-white border border-zinc-100 rounded-lg text-xs font-black text-[#9CA3AF] hover:text-zinc-900">
+                              <a key={idx} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-xs font-black text-[#9CA3AF] hover:text-zinc-900">
                                 <Paperclip className="h-3.5 w-3.5" />
                                 파일 {idx + 1}
                               </a>
@@ -428,16 +443,18 @@ export default function TicketDetailPage() {
 
         {/* 댓글 영역 (우측) */}
         {showRightArea && (
-          <div className="lg:col-span-5 flex flex-col space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white flex flex-col h-[calc(100vh-280px)]">
-              <div className="p-8 border-b bg-zinc-50/30">
+          <div className="lg:col-span-5 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500 sticky top-24 h-[calc(100vh-300px)]">
+            <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2.5rem] overflow-hidden bg-white flex flex-col h-full gap-0">
+              {/* 1. 타이틀: 고정 */}
+              <div className="p-8 border-b bg-zinc-50/30 flex-none">
                 <h3 className="text-xl font-black text-zinc-900 tracking-tighter italic">
                   {ticket.status === 'ACCEPTED' ? '업무 시작 메시지 작성' : '진행 히스토리'}
                 </h3>
               </div>
               
-              <ScrollArea className="flex-1 p-8">
-                <div className="space-y-8">
+              {/* 2. 내용: 남은 높이 차지 및 스크롤 */}
+              <ScrollArea className="flex-1 min-h-0">
+                <div ref={scrollRef} className="p-8 space-y-8">
                   {/* 진행 히스토리: ACCEPTED 상태가 아닐 때만 표시 */}
                   {ticket.status !== 'ACCEPTED' && historyMessages && historyMessages.length > 0 ? (
                     historyMessages.map((chat: any) => {
@@ -480,7 +497,7 @@ export default function TicketDetailPage() {
                                   target="_blank" 
                                   rel="noreferrer" 
                                   className={cn(
-                                    "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black transition-all border shadow-sm group",
+                                    "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all border shadow-sm group",
                                     isMyChat 
                                       ? "bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700" 
                                       : "bg-zinc-50 border-zinc-100 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
@@ -496,97 +513,100 @@ export default function TicketDetailPage() {
                       )
                     })
                   ) : ticket.status !== 'ACCEPTED' && (
-                    <div className="text-center py-10">
-                      <p className="text-sm font-black text-[#9CA3AF] italic">히스토리가 없습니다.</p>
+                    <div className="text-center py-20">
+                      <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Clock className="h-8 w-8 text-zinc-200" />
+                      </div>
+                      <p className="text-sm font-black text-[#9CA3AF] italic">대화 내용이 없습니다.</p>
                     </div>
                   )}
 
                   {/* ACCEPTED 상태일 때 안내 메시지 및 인력 배치 폼 */}
                   {ticket.status === 'ACCEPTED' && (
                     <div className="space-y-8">
-                      <div className="bg-zinc-50/50 p-6 rounded-[2rem] border border-zinc-100">
-                        <p className="text-sm font-black text-[#9CA3AF] leading-relaxed">
-                          업무가 접수되었습니다. <br/>
-                          실무 시작을 위한 메시지를 작성해 주세요. <br/>
-                          메시지를 전송하면 상태가 <span className="text-[#3B82F6]">진행</span>으로 변경됩니다.
-                        </p>
-                      </div>
+                       {/* 안내 메시지 */}
+                       <div className="bg-zinc-50/50 p-6 rounded-[2rem] border border-zinc-100 text-center">
+                         <p className="text-sm font-black text-[#9CA3AF] leading-relaxed">
+                           업무가 접수되었습니다. <br/>
+                           실무 시작을 위한 메시지를 작성해 주세요.
+                         </p>
+                       </div>
 
-                      {/* 종료일 변경 (고객 접수 건인 경우 운영자가 조정 가능) */}
-                      <div className="space-y-3">
-                          <div className="flex items-center justify-between ml-1">
-                          <label className="text-sm font-black text-zinc-700">종료일 확인 및 변경</label>
-                          <span className={cn("text-xs font-black italic", ticket.is_emergency ? "text-red-600" : "text-blue-600")}>
-                            {ticket.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
-                          </span>
-                        </div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full h-14 justify-start text-left font-black rounded-2xl border-zinc-200 hover:bg-zinc-50 transition-all",
-                                !selectedEndDate && "text-[#9CA3AF]",
-                                ticket.is_emergency && "border-red-200 bg-red-50/10"
-                              )}
-                            >
-                              <CalendarIcon className="mr-3 h-4 w-4" />
-                              {selectedEndDate ? format(selectedEndDate, "yyyy.MM.dd", { locale: ko }) : "날짜를 선택하세요"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 rounded-[1.5rem] border-none shadow-2xl" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={selectedEndDate}
-                              onSelect={setSelectedEndDate}
-                              initialFocus
-                              disabled={(date) => {
-                                const d = startOfDay(date);
-                                const t = startOfDay(new Date());
-                                if (d < t) return true;
-                                const minDate = ticket.is_emergency ? dateLimits.emergencyMin : dateLimits.standardMin;
-                                if (d < minDate) return true;
-                                if (isWeekend(d)) return true;
-                                const dateStr = format(d, 'yyyy-MM-dd');
-                                return HOLIDAYS_2026.includes(dateStr);
-                              }}
-                              locale={ko}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                       {/* 종료일 변경: 최초 희망일이 오늘보다 미래일 때만 표시 */}
+                       {!isInitialDatePassedOrToday && (
+                         <div className="space-y-3">
+                           <div className="flex items-center justify-between ml-1">
+                             <label className="text-sm font-black text-zinc-700">종료일 확인 및 변경</label>
+                             <span className={cn("text-xs font-black italic", ticket.is_emergency ? "text-red-600" : "text-blue-600")}>
+                               {ticket.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
+                             </span>
+                           </div>
+                           <Popover>
+                             <PopoverTrigger asChild>
+                               <Button
+                                 variant={"outline"}
+                                 className={cn(
+                                   "w-full h-14 justify-start text-left font-black rounded-2xl border-zinc-200 hover:bg-zinc-50 transition-all",
+                                   !selectedEndDate && "text-[#9CA3AF]",
+                                   ticket.is_emergency && "border-red-200 bg-red-50/10"
+                                 )}
+                               >
+                                 <CalendarIcon className="mr-3 h-4 w-4" />
+                                 {selectedEndDate ? format(selectedEndDate, "yyyy.MM.dd", { locale: ko }) : "날짜를 선택하세요"}
+                               </Button>
+                             </PopoverTrigger>
+                             <PopoverContent className="w-auto p-0 rounded-[1.5rem] border-none shadow-2xl" align="start">
+                               <Calendar
+                                 mode="single"
+                                 selected={selectedEndDate}
+                                 onSelect={setSelectedEndDate}
+                                 initialFocus
+                                 disabled={(date) => {
+                                   const d = startOfDay(date);
+                                   const t = startOfDay(new Date());
+                                   if (d < t) return true;
+                                   const minDate = ticket.is_emergency ? dateLimits.emergencyMin : dateLimits.standardMin;
+                                   if (d < minDate) return true;
+                                   if (isWeekend(d)) return true;
+                                   const dateStr = format(d, 'yyyy-MM-dd');
+                                   return HOLIDAYS_2026.includes(dateStr);
+                                 }}
+                                 locale={ko}
+                               />
+                             </PopoverContent>
+                           </Popover>
+                         </div>
+                       )}
 
-                      {/* 인력이 배정되지 않은 경우에만 인력 배치 폼 표시 (고객이 접수한 건을 관리자가 처음 열었을 때) */}
+                       {/* 인력 배치 폼 */}
                       {(!ticket.assignees || ticket.assignees.length === 0) && (
-                        <div className="space-y-6">
-                          <div className="space-y-3">
-                            <label className="text-sm font-black text-zinc-700 ml-1">내부 인력 배치</label>
-                            <div className="grid grid-cols-1 gap-2">
-                              {projectStaffs?.map((staff: any) => (
-                                <div 
-                                  key={staff.id}
-                                  onClick={() => toggleStaff(staff.id)}
-                                  className={cn(
-                                    "flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer",
-                                    selectedStaffs.includes(staff.id) 
-                                      ? "bg-zinc-900 border-zinc-900 text-white shadow-lg" 
-                                      : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
-                                  )}
-                                >
-                                  <div className={cn(
-                                    "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic",
-                                    selectedStaffs.includes(staff.id) ? "bg-zinc-800" : "bg-zinc-100 text-[#9CA3AF]"
-                                  )}>
-                                    {staff.role[0]}
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm font-black">{staff.full_name}</p>
-                                    <p className={cn("text-xs font-black opacity-60", selectedStaffs.includes(staff.id) ? "text-white" : "text-[#9CA3AF]")}>{staff.role}</p>
-                                  </div>
-                                  {selectedStaffs.includes(staff.id) && <Check className="h-4 w-4" />}
+                        <div className="space-y-3">
+                          <label className="text-sm font-black text-zinc-700 ml-1">내부 인력 배치</label>
+                          <div className="grid grid-cols-1 gap-2">
+                            {projectStaffs?.map((staff: any) => (
+                              <div 
+                                key={staff.id}
+                                onClick={() => toggleStaff(staff.id)}
+                                className={cn(
+                                  "flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer",
+                                  selectedStaffs.includes(staff.id) 
+                                    ? "bg-zinc-900 border-zinc-900 text-white shadow-lg" 
+                                    : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
+                                )}
+                              >
+                                <div className={cn(
+                                  "h-8 w-8 rounded-lg flex items-center justify-center text-xs font-black italic",
+                                  selectedStaffs.includes(staff.id) ? "bg-zinc-800" : "bg-zinc-100 text-[#9CA3AF]"
+                                )}>
+                                  {staff.role[0]}
                                 </div>
-                              ))}
-                            </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-black">{staff.full_name}</p>
+                                  <p className={cn("text-xs font-black opacity-60", selectedStaffs.includes(staff.id) ? "text-white" : "text-[#9CA3AF]")}>{staff.role}</p>
+                                </div>
+                                {selectedStaffs.includes(staff.id) && <Check className="h-4 w-4" />}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -595,9 +615,9 @@ export default function TicketDetailPage() {
                 </div>
               </ScrollArea>
 
-              {/* 댓글 작성 영역 (상태에 따라 다름) */}
+              {/* 3. 댓글 입력창: 고정 */}
               {ticket.status !== 'COMPLETED' && (
-                <div className="p-8 border-t bg-zinc-50/50">
+                <div className="p-8 border-t bg-zinc-50/50 flex-none">
                   {files.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       {files.map((file, index) => (

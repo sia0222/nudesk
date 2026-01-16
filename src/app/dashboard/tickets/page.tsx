@@ -600,7 +600,7 @@ export default function TicketsPage() {
       </PageHeader>
 
        {/* 통계 섹션 */}
-       <Card className="border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] rounded-[1.5rem] bg-white overflow-hidden mb-6">
+       <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[1.5rem] bg-white overflow-hidden mb-6">
          <CardContent className="p-6">
            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
              {[
@@ -640,11 +640,11 @@ export default function TicketsPage() {
              const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
              
              return (
-               <Card 
-                 key={ticket.id}
-                 onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
-                 className="group transition-all border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] rounded-[1.5rem] cursor-pointer hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] hover:-translate-y-1 bg-white overflow-hidden flex flex-col h-full gap-3"
-               >
+              <Card 
+                key={ticket.id}
+                onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+                className="group transition-all border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[1.5rem] cursor-pointer hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] hover:-translate-y-1 bg-white overflow-hidden flex flex-col h-full gap-3"
+              >
                  <CardHeader className="px-6 pt-6 pb-0 flex flex-row items-center justify-between space-y-0">
                    <Badge variant="outline" className={cn(
                      "font-black px-3 py-1 rounded-full text-xs border-2 shadow-sm uppercase tracking-widest",
@@ -694,22 +694,24 @@ export default function TicketsPage() {
                      {ticket.description || '내용이 없습니다.'}
                    </p>
 
-                   <div className="mt-auto pt-4 border-t border-zinc-50 grid grid-cols-2 gap-4">
-                     <div className="space-y-0.5">
-                       <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">등록일</p>
-                       <p className="text-xs font-bold text-zinc-900 italic">
-                         {format(new Date(ticket.created_at), "yyyy.MM.dd")}
-                       </p>
-                     </div>
-                     <div className="space-y-0.5">
-                       <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">확정 종료일</p>
-                       <p className="text-xs font-bold text-zinc-900 italic">
-                         {ticket.confirmed_end_date 
-                           ? format(new Date(ticket.confirmed_end_date), "yyyy.MM.dd") 
-                           : '---'}
-                       </p>
-                     </div>
-                   </div>
+                    <div className="mt-auto pt-4 border-t border-zinc-50 grid grid-cols-2 gap-4">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">최초 희망 종료일</p>
+                        <p className="text-xs font-bold text-zinc-900 italic">
+                          {ticket.initial_end_date 
+                            ? format(new Date(ticket.initial_end_date), "yyyy.MM.dd") 
+                            : '---'}
+                        </p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">확정 종료일</p>
+                        <p className="text-xs font-bold text-zinc-900 italic">
+                          {ticket.confirmed_end_date 
+                            ? format(new Date(ticket.confirmed_end_date), "yyyy.MM.dd") 
+                            : '---'}
+                        </p>
+                      </div>
+                    </div>
                  </CardContent>
                </Card>
              )

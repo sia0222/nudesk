@@ -520,7 +520,7 @@ export default function ProjectsPage() {
       </PageHeader>
 
       {/* 필터 및 검색 바 (UI용) */}
-      <div className="flex items-center gap-3 bg-white p-3 rounded-[1.5rem] border shadow-sm max-w-md">
+      <div className="flex items-center gap-3 bg-white p-3 rounded-[1.5rem] border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] max-w-md">
         <Search className="h-5 w-5 text-[#9CA3AF] ml-2" />
         <Input 
           placeholder="프로젝트명으로 검색..." 
@@ -529,7 +529,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* 프로젝트 리스트 테이블 */}
-      <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white mt-8">
+      <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2.5rem] overflow-hidden bg-white mt-8">
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-zinc-50/50">

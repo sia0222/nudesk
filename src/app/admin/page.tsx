@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
             transition={{ delay: index * 0.1 }}
           >
             <Link href={menu.href}>
-              <Card className="hover:shadow-md transition-all cursor-pointer group h-full border-none shadow-sm rounded-3xl overflow-hidden">
+              <Card className="hover:shadow-md transition-all cursor-pointer group h-full border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-3xl overflow-hidden">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div className={`${menu.bg} ${menu.color} p-3 rounded-xl`}>
                     <menu.icon className="h-6 w-6" />

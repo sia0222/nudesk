@@ -1,0 +1,47 @@
+---
+description: Business logic for ticket status transitions and date management in NuDesk
+globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/use-tickets.ts
+---
+
+# NuDesk Ticket Management Rules
+
+## 1. Status Transitions (상태 전환)
+
+- **Automatic Acceptance**: When an `ADMIN` or `STAFF` views a ticket in `WAITING` status, it must automatically transition to `ACCEPTED`.
+- **Work Commencement**: Transition from `ACCEPTED` to `IN_PROGRESS` occurs when the "Start Work Message" (실무 착수 메시지) is submitted.
+- **Automatic Delay**: Any ticket in `WAITING`, `ACCEPTED`, or `IN_PROGRESS` whose `confirmed_end_date` (or `initial_end_date` if not set) is in the past must be treated as `DELAYED`.
+
+## 2. Date Management (종료일 관리)
+
+- **Initial End Date (`initial_end_date`)**: The date requested by the customer during registration. This value must **never** be modified.
+- **Confirmed End Date (`confirmed_end_date`)**: The final deadline confirmed by the Admin/Staff.
+- **Visibility Rules**:
+    - The "Confirm and Change End Date" section in the ticket detail page is **only visible** if the `initial_end_date` is in the future.
+    - If the `initial_end_date` is **today or in the past**, the date selection UI must be hidden to prevent changes.
+- **Auto-Synchronization**:
+    - When starting work (`ACCEPTED` -> `IN_PROGRESS`):
+        - If the Admin/Staff chose a new date, save it to `confirmed_end_date`.
+        - If no date was chosen (or the UI was hidden), automatically copy `initial_end_date` to `confirmed_end_date`.
+
+## 3. Message Distinction (메시지 구분)
+
+- **Start Work Message (실무 착수 메시지)**:
+    - The first message sent by an Admin/Staff in `ACCEPTED` status.
+    - Displayed in the **Left Panel** under the ticket description.
+    - Filtered out from the general chat history in the Right Panel.
+- **General Comments**: All subsequent communication displayed in the **Right Panel** using a messenger-style UI.
+
+## 4. UI/UX Standards
+
+- **List Page (접수 리스트)**:
+    - Display **Initial End Date (최초 희망 종료일)** and **Confirmed End Date (확정 종료일)** in the ticket card.
+    - The "Registration Date" (`created_at`) is replaced by "Initial End Date" in the list view for better visibility of deadlines.
+- **Badge Styling**: Use `variant="outline"` with `border-2` and `font-black`.
+- **D-Day Color Logic**:
+    - `D-1` and earlier (future): Gray (`#9CA3AF`).
+    - `D-Day` and `D+` (today or past): Red (`#E53E3E`).
+- **Font Sizes**:
+    - Titles: 16px (List) / 24px (Detail).
+    - Main Content: 16px (List) / 18px (Detail).
+    - Status/Badges: 12px.
+    - Small text: Minimum 12px.

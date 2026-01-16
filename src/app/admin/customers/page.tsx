@@ -325,7 +325,7 @@ export default function AdminCustomersPage() {
         </Dialog>
       </PageHeader>
 
-      <div className="flex items-center gap-3 bg-white p-3 rounded-[1.5rem] border shadow-sm max-w-md">
+      <div className="flex items-center gap-3 bg-white p-3 rounded-[1.5rem] border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] max-w-md">
         <Search className="h-5 w-5 text-[#9CA3AF] ml-2" />
         <Input 
           placeholder="회사명으로 검색..." 
@@ -333,7 +333,7 @@ export default function AdminCustomersPage() {
         />
       </div>
 
-      <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white mt-8">
+      <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2.5rem] overflow-hidden bg-white mt-8">
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-zinc-50/50">
