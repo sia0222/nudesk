@@ -216,7 +216,7 @@ export default function TicketDetailPage() {
   const statusMap: any = {
     'WAITING': { label: '대기', color: 'border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5' },
     'ACCEPTED': { label: '접수', color: 'border-[#82B326] text-[#82B326] bg-[#82B326]/5' },
-    'IN_PROGRESS': { label: '진행', color: 'border-[#82B326] text-[#82B326] bg-[#82B326]/5' },
+    'IN_PROGRESS': { label: '진행', color: 'border-[#3B82F6] text-[#3B82F6] bg-[#3B82F6]/5' },
     'DELAYED': { label: '지연', color: 'border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5' },
     'REQUESTED': { label: '요청', color: 'border-[#242F67] text-[#242F67] bg-[#242F67]/5' },
     'COMPLETED': { label: '완료', color: 'border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5' },
@@ -343,25 +343,25 @@ export default function TicketDetailPage() {
               {/* 3. 상세 정보 섹션 (상대적으로 덜 중요한 정보) */}
               <div className="grid grid-cols-3 gap-8 px-2">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest">프로젝트 및 고객사</p>
+                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">프로젝트 및 고객사</p>
                   <p className="text-sm font-black text-zinc-600">{ticket.project?.name || '---'}</p>
                   <p className="text-xs font-bold text-[#9CA3AF]">{ticket.requester?.customer?.company_name || '---'}</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest">요청자 정보</p>
+                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">요청자 정보</p>
                   <div className="flex items-center gap-2">
                     <div className={cn(
-                      "h-6 w-6 rounded-lg flex items-center justify-center text-[10px] font-black",
+                      "h-6 w-6 rounded-lg flex items-center justify-center text-[12px] font-black",
                       roleBgMap[ticket.requester?.role] || "bg-zinc-100 text-zinc-400"
                     )}>
                       {ticket.requester?.full_name?.[0]}
                     </div>
                     <p className="text-sm font-black text-zinc-600">{ticket.requester?.full_name || '---'}</p>
                   </div>
-                  <p className="text-[10px] font-bold text-[#9CA3AF]">등록일: {format(new Date(ticket.created_at), 'yyyy.MM.dd')}</p>
+                  <p className="text-xs font-bold text-[#9CA3AF]">등록일: {format(new Date(ticket.created_at), 'yyyy.MM.dd')}</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest">최초 희망 종료일</p>
+                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">최초 희망 종료일</p>
                   <p className="text-sm font-black text-zinc-600 italic">
                     {ticket.initial_end_date 
                       ? format(new Date(ticket.initial_end_date), 'yyyy.MM.dd') 
@@ -392,14 +392,14 @@ export default function TicketDetailPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className={cn(
-                              "text-[10px] font-black",
+                              "text-xs font-black",
                               roleColorMap[chat.sender?.role] || "text-zinc-500"
                             )}>
                               {chat.sender?.role}
                             </span>
                             <span className="text-sm font-black text-zinc-900">{chat.sender?.full_name}</span>
                           </div>
-                        <span className="text-[10px] font-black text-[#9CA3AF]">{format(new Date(chat.created_at), 'yyyy.MM.dd HH:mm')}</span>
+                        <span className="text-xs font-black text-[#9CA3AF]">{format(new Date(chat.created_at), 'yyyy.MM.dd HH:mm')}</span>
                       </div>
                       {chat.message && (
                         <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 text-sm font-black text-zinc-700 whitespace-pre-wrap">
@@ -431,15 +431,15 @@ export default function TicketDetailPage() {
                         <p className="text-sm font-black text-[#9CA3AF] leading-relaxed">
                           업무가 접수되었습니다. <br/>
                           실무 시작을 위한 메시지를 작성해 주세요. <br/>
-                          메시지를 전송하면 상태가 <span className="text-[#82B326]">진행</span>으로 변경됩니다.
+                          메시지를 전송하면 상태가 <span className="text-[#3B82F6]">진행</span>으로 변경됩니다.
                         </p>
                       </div>
 
                       {/* 종료일 변경 (고객 접수 건인 경우 운영자가 조정 가능) */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between ml-1">
+                          <div className="flex items-center justify-between ml-1">
                           <label className="text-sm font-black text-zinc-700">종료일 확인 및 변경</label>
-                          <span className={cn("text-[10px] font-black italic", ticket.is_emergency ? "text-red-600" : "text-blue-600")}>
+                          <span className={cn("text-xs font-black italic", ticket.is_emergency ? "text-red-600" : "text-blue-600")}>
                             {ticket.is_emergency ? "긴급: 1영업일 이후부터" : "일반: 3영업일 이후부터"}
                           </span>
                         </div>
@@ -504,7 +504,7 @@ export default function TicketDetailPage() {
                                   </div>
                                   <div className="flex-1">
                                     <p className="text-sm font-black">{staff.full_name}</p>
-                                    <p className={cn("text-[10px] font-black opacity-60", selectedStaffs.includes(staff.id) ? "text-white" : "text-[#9CA3AF]")}>{staff.role}</p>
+                                    <p className={cn("text-xs font-black opacity-60", selectedStaffs.includes(staff.id) ? "text-white" : "text-[#9CA3AF]")}>{staff.role}</p>
                                   </div>
                                   {selectedStaffs.includes(staff.id) && <Check className="h-4 w-4" />}
                                 </div>

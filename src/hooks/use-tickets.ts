@@ -6,19 +6,22 @@ import { startOfDay } from 'date-fns'
 
 // 티켓의 상태와 날짜를 실시간으로 체크하여 자동 지연 처리를 수행하는 헬퍼 함수
 const processTicketStatus = (ticket: any) => {
-  if (!ticket) return ticket;
+  if (!ticket || ticket.status === 'COMPLETED') return ticket;
 
   const today = startOfDay(new Date());
-  // initial_end_date를 기준으로 지연 여부 판단
-  const initialDate = ticket.initial_end_date ? startOfDay(new Date(ticket.initial_end_date)) : null;
+  // 확정 종료일자가 있으면 그것을 기준으로, 없으면 최초 종료일자를 기준으로 지연 여부 판단
+  const targetDate = ticket.confirmed_end_date 
+    ? startOfDay(new Date(ticket.confirmed_end_date)) 
+    : (ticket.initial_end_date ? startOfDay(new Date(ticket.initial_end_date)) : null);
 
-  // 규칙: [대기] 또는 [접수] 상태인데 종료일자가 오늘이거나 지난 경우
-  if (initialDate && (ticket.status === 'WAITING' || ticket.status === 'ACCEPTED')) {
-    if (initialDate <= today) {
+  // 규칙: [대기], [접수], [진행] 상태인데 종료일자(또는 확정종료일자)가 현재 일자보다 적을 때(지났을 때) 지연으로 변경
+  // 사용자 요청: "지연 상태는 확정종료일자가 현재 일자보다 더 많을때로 변경해주세요" 
+  // -> 현재 일자가 확정종료일자보다 더 많을 때(지났을 때) 지연 상태가 되도록 적용
+  if (targetDate && (ticket.status === 'WAITING' || ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS')) {
+    if (today > targetDate) {
       return {
         ...ticket,
         status: 'DELAYED',
-        // 확정 종료일자가 없으면 종료일자로 동기화하여 표시
         confirmed_end_date: ticket.confirmed_end_date || ticket.initial_end_date
       };
     }

@@ -8,9 +8,6 @@ import { createClient } from "@/utils/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from "@/components/ui/table"
-import { 
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger 
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -18,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Zap, Loader2, AlertCircle, Plus, Briefcase, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon } from "lucide-react"
+import { Zap, Loader2, AlertCircle, Plus, Briefcase, ChevronRight, Paperclip, Check, X, FileText, Calendar as CalendarIcon, Clock, ClipboardCheck, PlayCircle, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useTickets, useCreateTicket } from "@/hooks/use-tickets"
@@ -602,121 +599,135 @@ export default function TicketsPage() {
         )}
       </PageHeader>
 
-       <Card className="border-none shadow-[0_10px_50px_rgba(0,0,0,0.03)] rounded-[2.5rem] overflow-hidden bg-white">
-         <Table>
-           <TableHeader className="bg-zinc-50/50">
-             <TableRow className="hover:bg-transparent border-zinc-50">
-               <TableHead className="w-[100px] font-black py-6 pl-10 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">상태</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">프로젝트</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest">제목</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">잔여일자</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">종료일자</TableHead>
-               <TableHead className="font-black py-6 text-[#9CA3AF] uppercase text-xs tracking-widest text-center">확정 종료일자</TableHead>
-               <TableHead className="w-[80px] py-6 pr-10 font-black"></TableHead>
-             </TableRow>
-           </TableHeader>
-           <TableBody>
-             {tickets && tickets.length > 0 ? (
-               tickets.map((ticket: any) => {
-                 // 지연 로직이 적용된 confirmed_end_date를 우선 사용, 없으면 initial_end_date 사용
-                 const targetDate = ticket.confirmed_end_date || ticket.initial_end_date;
-                 const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
-                 
-                 return (
-                            <TableRow
-                              key={ticket.id}
-                              onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
-                              className={cn(
-                                "group transition-all border-zinc-50 cursor-pointer hover:bg-zinc-50/50",
-                                ticket.is_emergency && "bg-red-50/20 hover:bg-red-50/40"
-                              )}
-                            >
-                     <TableCell className="py-6 pl-10 text-center">
-                       <Badge variant="outline" className={cn(
-                         "font-black px-4 py-1 rounded-full text-xs border-2 shadow-sm",
-                         ticket.status === 'WAITING' ? "border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5" :
-                         ticket.status === 'ACCEPTED' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" :
-                         ticket.status === 'IN_PROGRESS' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" :
-                         ticket.status === 'DELAYED' ? "border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5" :
-                         ticket.status === 'REQUESTED' ? "border-[#242F67] text-[#242F67] bg-[#242F67]/5" :
-                         ticket.status === 'COMPLETED' ? "border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5" :
-                         "border-zinc-200 text-[#9CA3AF] bg-zinc-50/50"
+       {/* 통계 섹션 */}
+       <Card className="border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] rounded-[1.5rem] bg-white overflow-hidden mb-6">
+         <CardContent className="p-6">
+           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+             {[
+               { label: '대기', status: 'WAITING', color: '#F6AD55', icon: Clock },
+               { label: '접수', status: 'ACCEPTED', color: '#82B326', icon: ClipboardCheck },
+               { label: '진행', status: 'IN_PROGRESS', color: '#3B82F6', icon: PlayCircle },
+               { label: '지연', status: 'DELAYED', color: '#E53E3E', icon: AlertTriangle },
+               { label: '완료', status: 'COMPLETED', color: '#9CA3AF', icon: CheckCircle2 },
+             ].map((item) => {
+               const count = tickets?.filter((t: any) => t.status === item.status).length || 0;
+               const Icon = item.icon;
+               return (
+                 <div key={item.status} className="flex flex-col items-center text-center group">
+                   <div 
+                     className="w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all duration-300 group-hover:scale-110"
+                     style={{ 
+                       backgroundColor: `${item.color}08`, // 매우 연한 배경
+                       border: `1px solid ${item.color}15` // 아주 옅은 테두리
+                     }}
+                   >
+                     <Icon className="w-5 h-5 transition-transform duration-500 group-hover:rotate-12" style={{ color: item.color }} />
+                   </div>
+                   <p className="text-lg font-black text-zinc-900 tracking-tighter mb-0.5">{count}건</p>
+                   <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest leading-none">{item.label}</p>
+                 </div>
+               );
+             })}
+           </div>
+         </CardContent>
+       </Card>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+         {tickets && tickets.length > 0 ? (
+           tickets.map((ticket: any) => {
+             // 지연 로직이 적용된 confirmed_end_date를 우선 사용, 없으면 initial_end_date 사용
+             const targetDate = ticket.confirmed_end_date || ticket.initial_end_date;
+             const dDay = targetDate ? differenceInDays(new Date(targetDate), startOfDay(new Date())) : null;
+             
+             return (
+               <Card 
+                 key={ticket.id}
+                 onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+                 className="group transition-all border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] rounded-[1.5rem] cursor-pointer hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] hover:-translate-y-1 bg-white overflow-hidden flex flex-col h-full gap-3"
+               >
+                 <CardHeader className="px-6 pt-6 pb-0 flex flex-row items-center justify-between space-y-0">
+                   <Badge variant="outline" className={cn(
+                     "font-black px-3 py-1 rounded-full text-xs border-2 shadow-sm uppercase tracking-widest",
+                     ticket.status === 'WAITING' ? "border-[#F6AD55] text-[#F6AD55] bg-[#F6AD55]/5" :
+                     ticket.status === 'ACCEPTED' ? "border-[#82B326] text-[#82B326] bg-[#82B326]/5" :
+                     ticket.status === 'IN_PROGRESS' ? "border-[#3B82F6] text-[#3B82F6] bg-[#3B82F6]/5" :
+                     ticket.status === 'DELAYED' ? "border-[#E53E3E] text-[#E53E3E] bg-[#E53E3E]/5" :
+                     ticket.status === 'REQUESTED' ? "border-[#242F67] text-[#242F67] bg-[#242F67]/5" :
+                     ticket.status === 'COMPLETED' ? "border-[#9CA3AF] text-[#9CA3AF] bg-[#9CA3AF]/5" :
+                     "border-zinc-200 text-[#9CA3AF] bg-zinc-50/50"
+                   )}>
+                     {ticket.status === 'WAITING' ? '대기' : 
+                      ticket.status === 'ACCEPTED' ? '접수' : 
+                      ticket.status === 'IN_PROGRESS' ? '진행' : 
+                      ticket.status === 'DELAYED' ? '지연' : 
+                      ticket.status === 'REQUESTED' ? '요청' : '완료'}
+                   </Badge>
+
+                   <div className="flex items-center gap-2">
+                     {ticket.status === 'COMPLETED' ? (
+                       <span className="text-[#9CA3AF] font-black text-xs uppercase tracking-widest italic">-</span>
+                     ) : dDay !== null ? (
+                       <span className={cn(
+                         "font-black text-sm tracking-tighter italic",
+                         dDay < 0 ? "text-[#E53E3E]" : 
+                         dDay === 0 ? "text-[#E53E3E]" :
+                         "text-[#242F67]"
                        )}>
-                         {ticket.status === 'WAITING' ? '대기' : 
-                          ticket.status === 'ACCEPTED' ? '접수' : 
-                          ticket.status === 'IN_PROGRESS' ? '진행' : 
-                          ticket.status === 'DELAYED' ? '지연' : 
-                          ticket.status === 'REQUESTED' ? '요청' : '완료'}
-                       </Badge>
-                     </TableCell>
-                     <TableCell className="py-6">
-                       <span className="text-sm font-black text-[#9CA3AF] uppercase tracking-tight leading-none">{ticket.project?.name || '---'}</span>
-                     </TableCell>
-                     <TableCell className="py-6">
-                       <div className="flex items-center gap-2">
-                         {ticket.is_emergency && <Zap className="h-4 w-4 text-red-600 fill-red-600 animate-pulse" />}
-                         <span className="font-black text-zinc-900 tracking-tight text-base">{ticket.title}</span>
-                       </div>
-                     </TableCell>
-                     <TableCell className="py-6 text-center">
-                       {ticket.status === 'COMPLETED' ? (
-                         <span className="text-[#9CA3AF] font-black text-sm">-</span>
-                       ) : dDay !== null ? (
-                         <span className={cn(
-                           "font-black text-sm",
-                           dDay < 0 ? "text-[#E53E3E]" : 
-                           dDay === 0 ? "text-[#E53E3E]" :
-                           "text-[#242F67]"
-                         )}>
-                           {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
-                         </span>
-                       ) : (
-                         <span className="text-[#9CA3AF] font-black text-sm">---</span>
-                       )}
-                     </TableCell>
-                     <TableCell className="py-6">
-                       <div className="flex items-center justify-center font-black text-[#9CA3AF] text-sm text-center">
-                         {/* 리스트에서도 등록 시점의 최초 종료일을 표시 */}
-                         {ticket.initial_end_date 
-                           ? format(new Date(ticket.initial_end_date), "yyyy-MM-dd") 
-                           : ticket.end_date 
-                             ? format(new Date(ticket.end_date), "yyyy-MM-dd") 
-                             : '---'}
-                       </div>
-                     </TableCell>
-                     <TableCell className="py-6">
-                       <div className="flex items-center justify-center font-black text-[#9CA3AF] text-sm text-center">
+                         {dDay === 0 ? "D-Day" : dDay < 0 ? `D+${Math.abs(dDay)}` : `D-${dDay}`}
+                       </span>
+                     ) : (
+                       <span className="text-[#9CA3AF] font-black text-xs uppercase tracking-widest italic">---</span>
+                     )}
+                   </div>
+                 </CardHeader>
+                 
+                 <CardContent className="px-6 pt-3 pb-6 flex-1 flex flex-col gap-3">
+                   <div className="space-y-1">
+                     <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-[0.2em]">{ticket.project?.name || '---'}</p>
+                     <div className="flex items-center gap-2">
+                       {ticket.is_emergency && <Zap className="h-4 w-4 text-red-600 fill-red-600 animate-pulse flex-shrink-0" />}
+                       <h3 className="font-black text-zinc-900 tracking-tight text-base line-clamp-1">
+                         {ticket.title}
+                       </h3>
+                     </div>
+                   </div>
+
+                   <p className="text-zinc-500 font-medium text-sm leading-relaxed line-clamp-2 min-h-[2.8rem]">
+                     {ticket.description || '내용이 없습니다.'}
+                   </p>
+
+                   <div className="mt-auto pt-4 border-t border-zinc-50 grid grid-cols-2 gap-4">
+                     <div className="space-y-0.5">
+                       <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">등록일</p>
+                       <p className="text-xs font-bold text-zinc-900 italic">
+                         {format(new Date(ticket.created_at), "yyyy.MM.dd")}
+                       </p>
+                     </div>
+                     <div className="space-y-0.5">
+                       <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">확정 종료일</p>
+                       <p className="text-xs font-bold text-zinc-900 italic">
                          {ticket.confirmed_end_date 
-                           ? format(new Date(ticket.confirmed_end_date), "yyyy-MM-dd") 
+                           ? format(new Date(ticket.confirmed_end_date), "yyyy.MM.dd") 
                            : '---'}
-                       </div>
-                     </TableCell>
-                     <TableCell className="py-6 pr-10 text-right">
-                        <Link href={`/dashboard/tickets/${ticket.id}`}>
-                          <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-zinc-100 group-hover:translate-x-1 transition-transform">
-                            <ChevronRight className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900" />
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-20 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
-                        <Briefcase className="h-8 w-8 text-zinc-200" />
-                      </div>
-                      <h3 className="text-lg font-black text-zinc-900 tracking-tighter">조회 가능한 티켓이 없습니다</h3>
-                      <p className="text-[#9CA3AF] text-sm font-black mt-1">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-        </Table>
-      </Card>
+                       </p>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+             )
+           })
+         ) : (
+           <div className="col-span-full py-32 text-center bg-white rounded-[3rem] shadow-[0_10px_50px_rgba(0,0,0,0.02)] border border-dashed border-zinc-100">
+             <div className="flex flex-col items-center justify-center">
+               <div className="h-20 w-20 bg-zinc-50 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+                 <Briefcase className="h-10 w-10 text-zinc-200" />
+               </div>
+               <h3 className="text-xl font-black text-zinc-900 tracking-tighter">조회 가능한 업무가 없습니다</h3>
+               <p className="text-[#9CA3AF] text-sm font-bold mt-2">새로운 업무를 접수하거나 담당 프로젝트를 확인해 주세요.</p>
+             </div>
+           </div>
+         )}
+       </div>
     </PageContainer>
   )
 }
