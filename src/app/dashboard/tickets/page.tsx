@@ -39,7 +39,6 @@ export default function TicketsPage() {
   const [formData, setFormData] = useState({
     project_id: '',
     receipt_type: '온라인' as '온라인' | '전화' | '팩스' | '이메일',
-    title: '',
     description: '',
     assigned_to_ids: [] as string[],
     end_date: undefined as Date | undefined,
@@ -197,9 +196,6 @@ export default function TicketsPage() {
     if (!formData.project_id) {
       newErrors.project_id = '프로젝트를 선택해주세요.';
     }
-    if (!formData.title.trim()) {
-      newErrors.title = '업무 제목을 입력해주세요.';
-    }
     
     // ADMIN, STAFF일 때만 내부 인력 배치 필수 검사
     if (profile?.role !== 'CUSTOMER' && formData.assigned_to_ids.length === 0) {
@@ -260,7 +256,7 @@ export default function TicketsPage() {
         onSuccess: () => {
           setIsOpen(false)
           setFormData({
-            project_id: '', receipt_type: '온라인', title: '',
+            project_id: '', receipt_type: '온라인',
             description: '', assigned_to_ids: [], end_date: undefined, is_emergency: false,
             emergency_reason: '', files: []
           })
@@ -356,27 +352,13 @@ export default function TicketsPage() {
                         )}
 
                         <div className="grid gap-2 col-span-2">
-                          <Label className="text-sm font-black text-zinc-700 ml-1">제목</Label>
-                          <Input 
-                            placeholder="업무 제목을 입력하세요" 
-                            className={cn(
-                              "h-14 rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 font-medium",
-                              errors.title && "border-red-500 bg-red-50/30"
-                            )}
-                            value={formData.title}
-                            onChange={e => handleInputChange('title', e.target.value)}
-                            required
-                          />
-                          {errors.title && <p className="text-xs font-bold text-red-500 ml-2 mt-1 italic">! {errors.title}</p>}
-                        </div>
-
-                        <div className="grid gap-2 col-span-2">
                           <Label className="text-sm font-black text-zinc-700 ml-1">내용</Label>
                           <Textarea
                             placeholder="상세 내용을 입력하세요"
                             className="min-h-[140px] rounded-2xl border-zinc-200 focus:ring-zinc-900 px-5 py-4 font-medium"
                             value={formData.description}
                             onChange={e => handleInputChange('description', e.target.value)}
+                            required
                           />
                         </div>
 
@@ -681,22 +663,21 @@ export default function TicketsPage() {
                  
                  <CardContent className="px-6 pt-3 pb-6 flex-1 flex flex-col gap-3">
                    <div className="space-y-1">
-                     <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-[0.2em]">{ticket.project?.name || '---'}</p>
+                     <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-[0.2em]">
+                       {ticket.project?.customer?.company_name ? `${ticket.project.customer.company_name} | ` : ''}
+                       {ticket.project?.name || '---'}
+                     </p>
                      <div className="flex items-center gap-2">
                        {ticket.is_emergency && <Zap className="h-4 w-4 text-red-600 fill-red-600 animate-pulse flex-shrink-0" />}
-                       <h3 className="font-black text-zinc-900 tracking-tight text-base line-clamp-1">
-                         {ticket.title}
+                       <h3 className="font-black text-zinc-900 tracking-tight text-base line-clamp-2 min-h-[3rem]">
+                         {ticket.description || '내용이 없습니다.'}
                        </h3>
                      </div>
                    </div>
 
-                   <p className="text-zinc-500 font-medium text-base leading-relaxed line-clamp-2 min-h-[3rem]">
-                     {ticket.description || '내용이 없습니다.'}
-                   </p>
-
                     <div className="mt-auto pt-4 border-t border-zinc-50 grid grid-cols-2 gap-4">
                       <div className="space-y-0.5">
-                        <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">최초 희망 종료일</p>
+                        <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">희망종료일</p>
                         <p className="text-xs font-bold text-zinc-900 italic">
                           {ticket.initial_end_date 
                             ? format(new Date(ticket.initial_end_date), "yyyy.MM.dd") 
@@ -704,7 +685,7 @@ export default function TicketsPage() {
                         </p>
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">확정 종료일</p>
+                        <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">종료예정일</p>
                         <p className="text-xs font-bold text-zinc-900 italic">
                           {ticket.confirmed_end_date 
                             ? format(new Date(ticket.confirmed_end_date), "yyyy.MM.dd") 

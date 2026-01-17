@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { Briefcase, Clock, Calendar as CalendarIcon, User, Building2, FileText, Send, Paperclip, X, Check, Loader2, Zap, ArrowLeft, Quote, Bookmark, Star, Mail, CheckCircle2 } from 'lucide-react'
-import { useTicket, useAddComment, useAssignStaffAndAccept, useProjectStaffs, useStartWork, useUpdateTicketStatus, useRequestDelay, useApproveDelay, useRejectDelay } from "@/hooks/use-tickets"
+import { useTicket, useAddComment, useAssignStaffAndAccept, useProjectStaffs, useStartWork, useUpdateTicketStatus, useRequestDelay, useApproveDelay, useRejectDelay, useRequestCompletion, useApproveCompletion, useRejectCompletion } from "@/hooks/use-tickets"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -42,20 +42,6 @@ export default function TicketDetailPage() {
   const { data: ticket, isLoading, isError } = useTicket(id as string)
   const { data: projectStaffs } = useProjectStaffs(ticket?.project_id)
   const scrollRef = useRef<HTMLDivElement>(null)
-
-  // 진행률 계산 로직
-  const progressInfo = useMemo(() => {
-    if (!ticket) return { percentage: 0, label: '0%', color: 'bg-zinc-200' };
-    switch (ticket.status) {
-      case 'WAITING': return { percentage: 5, label: '5%', color: 'bg-[#F6AD55]' };
-      case 'ACCEPTED': return { percentage: 30, label: '30%', color: 'bg-[#82B326]' };
-      case 'IN_PROGRESS': return { percentage: 75, label: '75%', color: 'bg-[#3B82F6]' };
-      case 'DELAYED': return { percentage: 75, label: '75%', color: 'bg-[#E53E3E]' };
-      case 'REQUESTED': return { percentage: 85, label: '85%', color: 'bg-[#242F67]' };
-      case 'COMPLETED': return { percentage: 100, label: '100%', color: 'bg-[#9CA3AF]' };
-      default: return { percentage: 0, label: '0%', color: 'bg-zinc-200' };
-    }
-  }, [ticket?.status]);
 
   // 조치 계획 추출 (운영진이 작성한 첫 번째 메시지)
   const startWorkMessage = useMemo(() => {
@@ -101,6 +87,9 @@ export default function TicketDetailPage() {
   const requestDelayMutation = useRequestDelay()
   const approveDelayMutation = useApproveDelay()
   const rejectDelayMutation = useRejectDelay()
+  const requestCompletionMutation = useRequestCompletion()
+  const approveCompletionMutation = useApproveCompletion()
+  const rejectCompletionMutation = useRejectCompletion()
   
   // ADMIN/STAFF 자동 접수 및 초기 종료일 설정
   useEffect(() => {
@@ -120,16 +109,28 @@ export default function TicketDetailPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isDelayDialogOpen, setIsDelayDialogOpen] = useState(false)
   const [delayRequestDate, setDelayRequestDate] = useState<Date | undefined>(undefined)
+  const [delayReason, setDelayReason] = useState('')
+  const [acceptanceDelayReason, setAcceptanceDelayReason] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
   const [isRejecting, setIsRejecting] = useState(false)
+  const [isRejectingCompletion, setIsRejectingCompletion] = useState(false)
+  const [completionRejectionReason, setCompletionRejectionReason] = useState('')
   
-  // 최초 희망 종료일이 오늘이거나 과거인지 확인
+  // 희망종료일이 오늘이거나 과거인지 확인
   const isInitialDatePassedOrToday = useMemo(() => {
     if (!ticket?.initial_end_date) return false;
     const initialDate = startOfDay(new Date(ticket.initial_end_date));
     const today = startOfDay(new Date());
     return initialDate <= today;
   }, [ticket?.initial_end_date]);
+
+  // 접수 시 선택한 종료일이 희망종료일보다 늦은지 확인
+  const isAcceptanceDelayed = useMemo(() => {
+    if (!selectedEndDate || !ticket?.initial_end_date) return false;
+    const selectedDate = startOfDay(selectedEndDate);
+    const initialDate = startOfDay(new Date(ticket.initial_end_date));
+    return selectedDate > initialDate;
+  }, [selectedEndDate, ticket?.initial_end_date]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -169,23 +170,31 @@ export default function TicketDetailPage() {
       }
       
        if (ticket?.status === 'ACCEPTED') {
-         // 달력에서 선택한 날짜가 있으면 사용, 없으면 최초 희망 종료일을 확정 종료일자로 자동 설정
+         // 달력에서 선택한 날짜가 있으면 사용, 없으면 희망종료일을 종료예정일로 자동 설정
          const finalEndDate = selectedEndDate 
            ? format(selectedEndDate, 'yyyy-MM-dd') 
            : (ticket.initial_end_date ? format(new Date(ticket.initial_end_date), 'yyyy-MM-dd') : undefined);
+
+         if (isAcceptanceDelayed && !acceptanceDelayReason.trim()) {
+           alert('종료일이 희망종료일보다 늦어질 경우, 처리연기 사유를 입력해 주세요.');
+           setIsUploading(false);
+           return;
+         }
 
          startWorkMutation.mutate({
            ticketId: id as string,
            message: comment,
            file_urls: uploadedUrls,
            staffIds: selectedStaffs,
-           endDate: finalEndDate
+           endDate: finalEndDate,
+           delayReason: isAcceptanceDelayed ? acceptanceDelayReason : undefined
          }, {
            onSuccess: () => {
              setComment('')
              setFiles([])
              setSelectedStaffs([])
              setSelectedEndDate(undefined)
+             setAcceptanceDelayReason('')
            }
          })
        } else {
@@ -224,17 +233,24 @@ export default function TicketDetailPage() {
       alert(`${ticket!.is_emergency ? '긴급' : '일반'} 접수는 ${format(minDate, 'yyyy-MM-dd')} 이후부터 가능합니다.`)
       return
     }
+
+    if (isAcceptanceDelayed && !acceptanceDelayReason.trim()) {
+      alert('종료일이 희망종료일보다 늦어질 경우, 처리연기 사유를 입력해 주세요.');
+      return;
+    }
     
     assignStaffMutation.mutate({
       ticketId: id as string,
       staffIds: selectedStaffs,
       message: comment,
-      endDate: format(selectedEndDate, 'yyyy-MM-dd')
+      endDate: format(selectedEndDate, 'yyyy-MM-dd'),
+      delayReason: isAcceptanceDelayed ? acceptanceDelayReason : undefined
     }, {
       onSuccess: () => {
         setComment('')
         setSelectedStaffs([])
         setSelectedEndDate(undefined)
+        setAcceptanceDelayReason('')
       }
     })
   }
@@ -252,13 +268,19 @@ export default function TicketDetailPage() {
       alert('연기할 날짜를 선택해 주세요.')
       return
     }
+    if (!delayReason.trim()) {
+      alert('연기 사유를 입력해 주세요.')
+      return
+    }
     requestDelayMutation.mutate({
       ticketId: id as string,
-      requestedDate: format(delayRequestDate, 'yyyy-MM-dd')
+      requestedDate: format(delayRequestDate, 'yyyy-MM-dd'),
+      reason: delayReason
     }, {
       onSuccess: () => {
         setIsDelayDialogOpen(false)
         setDelayRequestDate(undefined)
+        setDelayReason('')
       }
     })
   }
@@ -286,6 +308,105 @@ export default function TicketDetailPage() {
       }
     })
   }
+
+  const handleApproveCompletion = () => {
+    approveCompletionMutation.mutate({ ticketId: id as string })
+  }
+
+  const handleRejectCompletion = () => {
+    if (!completionRejectionReason.trim()) {
+      alert('반려 사유를 입력해 주세요.')
+      return
+    }
+    rejectCompletionMutation.mutate({
+      ticketId: id as string,
+      reason: completionRejectionReason
+    }, {
+      onSuccess: () => {
+        setIsRejectingCompletion(false)
+        setCompletionRejectionReason('')
+      }
+    })
+  }
+
+  const timelineItems = useMemo(() => {
+    if (!ticket?.history) return [];
+
+    const history = ticket.history;
+    
+    // 완료 요청들 중 가장 최신 것 찾기
+    const allReqItems = history.filter((h: any) => h.type === 'COMPLETE_REQUESTED');
+    const latestReqItem = allReqItems[allReqItems.length - 1];
+
+    // 1. 핵심 기둥(완료)을 제외한 히스토리 항목
+    // 단, '완료요청'은 현재 티켓 상태가 '요청'일 때만 4번째 기둥에서 처리하고, 
+    // 그 외의 경우(반려되었거나 이미 완료된 경우)에는 중간 히스토리 포인트로 표시함
+    const otherHistory = history.filter((h: any) => {
+      if (['COMPLETED', 'COMPLETE_APPROVED'].includes(h.type)) return false;
+      // 현재 '요청' 상태이고, 이 항목이 가장 최신 완료 요청인 경우 기둥에서 처리함
+      if (h.type === 'COMPLETE_REQUESTED' && ticket.status === 'REQUESTED' && h.id === latestReqItem?.id) return false;
+      return true;
+    });
+
+    const items: any[] = otherHistory.map((h: any) => {
+      let label = h.type;
+      let icon = Clock;
+      let color = "#9CA3AF";
+      
+      switch (h.type) {
+        case 'WAITING': label = '대기'; icon = Clock; color = "#F6AD55"; break;
+        case 'ACCEPTED': label = '접수'; icon = Bookmark; color = "#82B326"; break;
+        case 'IN_PROGRESS': label = '진행'; icon = Zap; color = "#3B82F6"; break;
+        case 'DELAY_REQUESTED': label = '연기요청'; icon = CalendarIcon; color = "#3B82F6"; break;
+        case 'DELAY_APPROVED': label = '연기승인'; icon = Check; color = "#82B326"; break;
+        case 'DELAY_REJECTED': label = '연기반려'; icon = X; color = "#E53E3E"; break;
+        case 'COMPLETE_REQUESTED': label = '완료요청'; icon = Send; color = "#242F67"; break;
+        case 'COMPLETE_REJECTED': label = '완료반려'; icon = X; color = "#E53E3E"; break;
+      }
+      return { ...h, label, icon, color, isCompleted: true };
+    });
+
+    // 2. 누락된 핵심 단계(대기, 접수, 진행)를 미래 단계로 추가
+    const historyTypes = otherHistory.map((h: any) => h.type);
+    const baseStages = [
+      { type: 'WAITING', label: '대기', icon: Clock, color: "#F6AD55" },
+      { type: 'ACCEPTED', label: '접수', icon: Bookmark, color: "#82B326" },
+      { type: 'IN_PROGRESS', label: '진행', icon: Zap, color: "#3B82F6" }
+    ];
+
+    baseStages.forEach(stage => {
+      if (!historyTypes.includes(stage.type)) {
+        let currentStatusIdx = ['WAITING', 'ACCEPTED', 'IN_PROGRESS', 'DELAYED', 'REQUESTED', 'COMPLETED'].indexOf(ticket.status);
+        const stageIdx = ['WAITING', 'ACCEPTED', 'IN_PROGRESS'].indexOf(stage.type);
+        
+        if (stageIdx > currentStatusIdx) {
+          items.push({ ...stage, isCompleted: false, created_at: null, color: "#E2E8F0" });
+        }
+      }
+    });
+
+    // 시간순 정렬 (미래 단계는 뒤로)
+    items.sort((a, b) => {
+      if (a.created_at && b.created_at) return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (a.created_at) return -1;
+      if (b.created_at) return 1;
+      const order = ['WAITING', 'ACCEPTED', 'IN_PROGRESS'];
+      return order.indexOf(a.type) - order.indexOf(b.type);
+    });
+
+    // 3. 마지막 '완료' 기둥 추가 (요청 중이면 완료요청으로, 완료되면 완료로 표시)
+    const compItem = history.find((h: any) => h.type === 'COMPLETED' || h.type === 'COMPLETE_APPROVED');
+    
+    if (compItem) {
+      items.push({ type: 'COMPLETED', label: '완료', icon: Star, color: "#9CA3AF", created_at: compItem.created_at, isCompleted: true });
+    } else if (latestReqItem && ticket.status === 'REQUESTED') {
+      items.push({ type: 'COMPLETED', label: '완료요청', icon: Send, color: "#242F67", created_at: latestReqItem.created_at, isCompleted: true });
+    } else {
+      items.push({ type: 'COMPLETED', label: '완료', icon: Star, color: "#E2E8F0", created_at: null, isCompleted: false });
+    }
+
+    return items;
+  }, [ticket?.history, ticket?.status]);
 
   if (isLoading) {
     return (
@@ -357,7 +478,7 @@ export default function TicketDetailPage() {
         }
       />
 
-      {/* 연기 요청 알림 (고객용) - 타이틀 구역 하위로 이동 */}
+      {/* 연기 요청 알림 (고객용) */}
       {profile?.role === 'CUSTOMER' && ticket.delay_status === 'PENDING' && (
         <Card className="mt-8 border-blue-100 bg-blue-50/20 shadow-[0_8px_30px_rgba(59,130,246,0.05)] rounded-[2rem] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
           <CardContent className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -416,84 +537,149 @@ export default function TicketDetailPage() {
         </Card>
       )}
 
+      {/* 완료 요청 알림 (고객용) */}
+      {profile?.role === 'CUSTOMER' && ticket.complete_status === 'PENDING' && (
+        <Card className="mt-8 border-green-100 bg-green-50/20 shadow-[0_8px_30px_rgba(34,197,94,0.05)] rounded-[2rem] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+          <CardContent className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5 text-center md:text-left">
+              <div className="h-14 w-14 rounded-2xl bg-[#82B326] flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-100">
+                <CheckCircle2 className="h-7 w-7 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-zinc-900">업무 완료 승인 요청이 도착했습니다</h3>
+                <p className="text-sm font-bold text-zinc-500">
+                  업무가 완료되었습니다. 최종 결과물을 확인하시고 승인해 주세요.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <Button 
+                variant="outline" 
+                className="flex-1 md:flex-none h-12 px-8 rounded-xl border-zinc-200 font-black text-zinc-600 hover:bg-white hover:text-red-500 hover:border-red-100 transition-all"
+                onClick={() => setIsRejectingCompletion(true)}
+              >
+                반려
+              </Button>
+              <Button 
+                className="flex-1 md:flex-none h-12 px-10 rounded-xl bg-[#82B326] text-white font-black hover:bg-green-600 shadow-lg shadow-green-100 transition-all"
+                onClick={handleApproveCompletion}
+                disabled={approveCompletionMutation.isPending}
+              >
+                {approveCompletionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "완료 승인"}
+              </Button>
+            </div>
+          </CardContent>
+          {isRejectingCompletion && (
+            <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+              <div className="p-6 bg-white rounded-2xl border border-green-50 space-y-4">
+                <label className="text-sm font-black text-zinc-900">반려 사유를 작성해 주세요</label>
+                <Textarea 
+                  placeholder="반려 사유를 입력하세요..." 
+                  className="min-h-[100px] rounded-xl border-zinc-100 focus-visible:ring-green-500 font-bold"
+                  value={completionRejectionReason}
+                  onChange={(e) => setCompletionRejectionReason(e.target.value)}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" className="h-10 px-6 rounded-xl font-black text-zinc-400" onClick={() => setIsRejectingCompletion(false)}>취소</Button>
+                  <Button 
+                    className="h-10 px-8 rounded-xl bg-red-500 text-white font-black hover:bg-red-600 shadow-lg shadow-red-100"
+                    onClick={handleRejectCompletion}
+                    disabled={rejectCompletionMutation.isPending}
+                  >
+                    {rejectCompletionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "반려 확정"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* 1. 타임라인 섹션 - 상단 전체 너비 차지 */}
+      <Card className="mt-8 border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2rem] overflow-hidden bg-white">
+        <CardContent className="p-8 space-y-8">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-black text-zinc-900 uppercase tracking-widest">업무 타임라인</p>
+            {(profile?.role === 'ADMIN' || profile?.role === 'STAFF') && 
+             !['WAITING', 'ACCEPTED', 'COMPLETED'].includes(ticket.status) && (
+              <div className="flex items-center gap-2">
+                {/* 연기 요청 버튼: 아직 한 번도 요청하지 않았고, 현재 완료 요청 중이 아닐 때만 표시 */}
+                {ticket.delay_status === null && ticket.status !== 'REQUESTED' && (
+                  <Button 
+                    variant="outline" 
+                    className="h-10 px-6 rounded-xl border-zinc-200 font-black text-xs text-zinc-900 hover:bg-zinc-50 transition-all"
+                    onClick={() => {
+                      setDelayRequestDate(undefined)
+                      setIsDelayDialogOpen(true)
+                    }}
+                  >
+                    연기 요청
+                  </Button>
+                )}
+                {/* 완료 요청 버튼: 현재 완료 요청 중이 아니고, 연기 요청 승인 대기 중도 아닐 때만 표시 */}
+                {ticket.status !== 'REQUESTED' && ticket.delay_status !== 'PENDING' && (
+                  <Button 
+                    className="h-10 px-6 rounded-xl bg-zinc-900 text-white font-black text-xs hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-100"
+                    onClick={() => requestCompletionMutation.mutate({ ticketId: id as string })}
+                    disabled={requestCompletionMutation.isPending}
+                  >
+                    {requestCompletionMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                    완료 요청
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* 타임라인 렌더링 */}
+          <div className="relative px-4">
+            {/* 배경 선 */}
+            <div className="absolute top-5 left-8 right-8 h-0.5 bg-zinc-100" />
+            
+            <div className="relative flex justify-between items-start no-scrollbar min-w-max md:min-w-0">
+              {timelineItems.map((item: any, i: number) => {
+                const Icon = item.icon;
+                const isBaseStep = ['WAITING', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED'].includes(item.type);
+                
+                return (
+                  <div key={i} className="flex flex-col items-center gap-3 z-10 bg-white px-2">
+                    <div 
+                      className={cn(
+                        "h-10 w-10 rounded-2xl flex items-center justify-center shadow-lg transition-transform hover:scale-110",
+                        isBaseStep ? "" : "h-8 w-8 rounded-xl opacity-80 mt-1"
+                      )}
+                      style={{ 
+                        backgroundColor: item.color, 
+                        boxShadow: isBaseStep ? `0 8px 20px ${item.color}44` : 'none'
+                      }}
+                    >
+                      <Icon className={cn("text-white", isBaseStep ? "h-5 w-5" : "h-4 w-4")} />
+                    </div>
+                    <div className="text-center space-y-0.5">
+                      <p className={cn(
+                        "font-black text-zinc-900 whitespace-nowrap",
+                        isBaseStep ? "text-[11px]" : "text-[10px] text-zinc-500"
+                      )}>
+                        {item.label}
+                      </p>
+                      <p className="text-[9px] font-bold text-zinc-400 whitespace-nowrap">
+                        {item.created_at ? format(new Date(item.created_at), 'MM.dd HH:mm') : '-'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
         {/* 정보 영역 (좌측) */}
         <div className={cn(
           "space-y-6 transition-all duration-500",
           !showRightArea ? "lg:col-span-12" : "lg:col-span-7"
         )}>
-          {/* 1. 진행률 섹션 */}
-          <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2rem] overflow-hidden bg-white">
-            <CardContent className="p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">현재 진행 상황</p>
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-black text-zinc-900 tracking-tighter">{progressInfo.percentage}%</h2>
-                    <span className="text-xl font-black text-zinc-200 tracking-tighter">/</span>
-                    <span 
-                      className="text-xl font-black tracking-tighter"
-                      style={{ color: statusMap[ticket.status].hex }}
-                    >
-                      {statusMap[ticket.status].label}
-                    </span>
-                  </div>
-                </div>
-                {(profile?.role === 'ADMIN' || profile?.role === 'STAFF') && 
-                 !['WAITING', 'ACCEPTED', 'COMPLETED'].includes(ticket.status) && (
-                  <div className="flex items-center gap-2">
-                    {ticket.delay_status === null && (
-                      <Button 
-                        variant="outline" 
-                        className="h-10 px-6 rounded-xl border-zinc-200 font-black text-xs text-zinc-900 hover:bg-zinc-50 transition-all"
-                        onClick={() => {
-                          setDelayRequestDate(undefined)
-                          setIsDelayDialogOpen(true)
-                        }}
-                      >
-                        연기 요청
-                      </Button>
-                    )}
-                    <Button className="h-10 px-6 rounded-xl bg-zinc-900 text-white font-black text-xs hover:bg-zinc-800 transition-all shadow-lg shadow-zinc-100">
-                      완료 요청
-                    </Button>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <div className="relative h-3 w-full bg-zinc-100 rounded-full overflow-hidden">
-                  <div 
-                    className={cn("absolute left-0 top-0 h-full transition-all duration-1000 ease-out", progressInfo.color)}
-                    style={{ width: `${progressInfo.percentage}%` }}
-                  />
-                  <div className="absolute inset-0 flex justify-evenly pointer-events-none">
-                    <div className="h-full w-px bg-white/50" />
-                    <div className="h-full w-px bg-white/50" />
-                    <div className="h-full w-px bg-white/50" />
-                  </div>
-                </div>
-                <div className="flex justify-between px-1">
-                  {steps.map((step, i) => {
-                    const isActive = step.statuses.includes(ticket.status);
-                    return (
-                      <span 
-                        key={i} 
-                        className={cn(
-                          "text-[10px] font-black uppercase tracking-widest transition-colors duration-300",
-                          isActive ? "opacity-100" : "text-[#9CA3AF] opacity-50"
-                        )}
-                        style={isActive ? { color: statusMap[ticket.status].hex } : {}}
-                      >
-                        {step.label}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* 2. 업무 내용 및 착수 메시지 (동일 중요도 구성) */}
           <Card className="border border-zinc-100 shadow-[0_8px_30px_rgba(0,0,0,0.02)] rounded-[2rem] overflow-hidden bg-white">
             <CardContent className="p-0">
@@ -501,15 +687,14 @@ export default function TicketDetailPage() {
               <div className="p-10 space-y-8">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-zinc-500">{ticket.requester?.customer?.company_name || '---'}</span>
+                    <span className="text-xs font-black text-zinc-500">
+                      {ticket.project?.customer?.company_name || ticket.requester?.customer?.company_name || '---'}
+                    </span>
                     <span className="text-xs font-black text-zinc-300">|</span>
                     <span className="text-xs font-bold text-zinc-400">
                       {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm')}
                     </span>
                   </div>
-                  <h1 className="text-xl font-black text-zinc-900 tracking-tighter leading-tight">
-                    {ticket.title}
-                  </h1>
                   <div className="min-h-[200px] text-zinc-900 font-black text-lg leading-relaxed whitespace-pre-wrap">
                     {ticket.description || '상세 내용이 없습니다.'}
                   </div>
@@ -591,6 +776,42 @@ export default function TicketDetailPage() {
             </Card>
           )}
 
+          {/* 처리 연기 사유 섹션 */}
+          {ticket.processing_delay_reason && (
+            <Card className="border border-amber-100 bg-amber-50/5 shadow-[0_8px_30px_rgba(245,158,11,0.02)] rounded-[1.5rem] overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-9 w-9 rounded-xl bg-white border border-amber-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <CalendarIcon className="h-4.5 w-4.5 text-amber-600" />
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex-shrink-0">처리 연기 사유</span>
+                  <div className="h-3 w-px bg-amber-200" />
+                  <p className="text-base font-bold text-zinc-900">
+                    "{ticket.processing_delay_reason}"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 연기 요청 사유 섹션 */}
+          {ticket.delay_reason && (
+            <Card className="border border-blue-100 bg-blue-50/5 shadow-[0_8px_30px_rgba(59,130,246,0.02)] rounded-[1.5rem] overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-9 w-9 rounded-xl bg-white border border-blue-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Clock className="h-4.5 w-4.5 text-blue-600" />
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex-shrink-0">연기 사유</span>
+                  <div className="h-3 w-px bg-blue-200" />
+                  <p className="text-base font-bold text-zinc-900">
+                    "{ticket.delay_reason}"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* 연기 요청 반려 사유 섹션 */}
           {ticket.delay_status === 'REJECTED' && ticket.delay_rejection_reason && (
             <Card className="border border-orange-100 bg-orange-50/5 shadow-[0_8px_30px_rgba(249,115,22,0.02)] rounded-[1.5rem] overflow-hidden">
@@ -603,6 +824,42 @@ export default function TicketDetailPage() {
                   <div className="h-3 w-px bg-orange-200" />
                   <p className="text-base font-bold text-zinc-900">
                     "{ticket.delay_rejection_reason}"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 완료 요청 반려 사유 섹션 */}
+          {ticket.complete_status === 'REJECTED' && ticket.complete_rejection_reason && (
+            <Card className="border border-red-100 bg-red-50/5 shadow-[0_8px_30px_rgba(239,68,68,0.02)] rounded-[1.5rem] overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-9 w-9 rounded-xl bg-white border border-red-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <X className="h-4.5 w-4.5 text-red-600" />
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className="text-[10px] font-black text-red-600 uppercase tracking-widest flex-shrink-0">완료요청 반려</span>
+                  <div className="h-3 w-px bg-red-200" />
+                  <p className="text-base font-bold text-zinc-900">
+                    "{ticket.complete_rejection_reason}"
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 완료 요청 반려 사유 섹션 */}
+          {ticket.complete_status === 'REJECTED' && ticket.complete_rejection_reason && (
+            <Card className="border border-rose-100 bg-rose-50/5 shadow-[0_8px_30px_rgba(225,29,72,0.02)] rounded-[1.5rem] overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-9 w-9 rounded-xl bg-white border border-rose-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <X className="h-4.5 w-4.5 text-rose-600" />
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest flex-shrink-0">완료요청 반려</span>
+                  <div className="h-3 w-px bg-rose-200" />
+                  <p className="text-base font-bold text-zinc-900">
+                    "{ticket.complete_rejection_reason}"
                   </p>
                 </div>
               </CardContent>
@@ -639,26 +896,26 @@ export default function TicketDetailPage() {
                   </div>
                 </div>
 
-                {/* 최초 희망 종료일 */}
+                {/* 희망종료일 */}
                 <div className="p-5 flex items-center gap-4 border-r border-zinc-50 md:border-b-0 border-b">
                   <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
                     <CalendarIcon className="h-4.5 w-4.5 text-[#9CA3AF]" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">최초 희망 종료일</p>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">희망종료일</p>
                     <p className="text-sm font-black text-zinc-900 tracking-tight">
                       {ticket.initial_end_date ? format(new Date(ticket.initial_end_date), 'yyyy.MM.dd') : '---'}
                     </p>
                   </div>
                 </div>
 
-                {/* 최종 확정 종료일자 */}
+                {/* 종료예정일 */}
                 <div className="p-5 flex items-center gap-4">
                   <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center flex-shrink-0">
                     <CheckCircle2 className="h-4.5 w-4.5 text-[#9CA3AF]" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">최종 확정 종료일자</p>
+                    <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest mb-0.5">종료예정일</p>
                     <p className="text-sm font-black text-zinc-900 tracking-tight">
                       {ticket.confirmed_end_date ? format(new Date(ticket.confirmed_end_date), 'yyyy.MM.dd') : '---'}
                     </p>
@@ -753,7 +1010,7 @@ export default function TicketDetailPage() {
                          </p>
                        </div>
 
-                       {/* 종료일 변경: 최초 희망일이 오늘보다 미래일 때만 표시 */}
+                       {/* 종료일 변경: 희망종료일이 오늘보다 미래일 때만 표시 */}
                        {!isInitialDatePassedOrToday && (
                          <div className="space-y-3">
                            <div className="flex items-center justify-between ml-1">
@@ -796,6 +1053,19 @@ export default function TicketDetailPage() {
                                />
                              </PopoverContent>
                            </Popover>
+                         </div>
+                       )}
+
+                       {/* 종료일 연기 시 사유 입력 */}
+                       {isAcceptanceDelayed && (
+                         <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                           <label className="text-sm font-black text-zinc-900 ml-1">처리연기 사유 (필수)</label>
+                           <Textarea 
+                             placeholder="종료일이 희망종료일보다 늦어지는 사유를 입력해 주세요..." 
+                             className="min-h-[100px] rounded-2xl border-zinc-200 focus-visible:ring-zinc-900 font-bold p-4"
+                             value={acceptanceDelayReason}
+                             onChange={(e) => setAcceptanceDelayReason(e.target.value)}
+                           />
                          </div>
                        )}
 
@@ -947,7 +1217,7 @@ export default function TicketDetailPage() {
                   disabled={(date) => {
                     const d = startOfDay(date);
                     const currentTarget = startOfDay(new Date(ticket.confirmed_end_date || ticket.initial_end_date));
-                    // 현재 확정 종료일자보다 이후 날짜만 선택 가능 (동일한 날짜도 불가)
+                    // 현재 종료예정일보다 이후 날짜만 선택 가능 (동일한 날짜도 불가)
                     if (d <= currentTarget) return true;
                     if (isWeekend(d)) return true;
                     const dateStr = format(d, 'yyyy-MM-dd');
@@ -957,6 +1227,15 @@ export default function TicketDetailPage() {
                 />
               </PopoverContent>
             </Popover>
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-black text-zinc-900 ml-1">연기 사유</label>
+            <Textarea 
+              placeholder="연기 사유를 상세히 입력해 주세요..." 
+              className="min-h-[120px] rounded-2xl border-zinc-200 focus-visible:ring-zinc-900 font-bold p-4"
+              value={delayReason}
+              onChange={(e) => setDelayReason(e.target.value)}
+            />
           </div>
           <p className="text-xs font-bold text-[#9CA3AF] leading-relaxed bg-zinc-50 p-4 rounded-xl">
             * 연기 요청 시 고객의 승인이 필요합니다.<br/>

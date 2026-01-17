@@ -16,6 +16,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 3. 기존 테이블 삭제
 DROP TABLE IF EXISTS public.chats CASCADE;
+DROP TABLE IF EXISTS public.ticket_history CASCADE;
 DROP TABLE IF EXISTS public.delay_requests CASCADE;
 DROP TABLE IF EXISTS public.ticket_assignees CASCADE;
 DROP TABLE IF EXISTS public.tickets CASCADE;
@@ -90,7 +91,6 @@ CREATE TABLE public.project_members (
 
 CREATE TABLE public.tickets (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    title TEXT NOT NULL,
     description TEXT,
     status ticket_status NOT NULL DEFAULT 'WAITING',
     receipt_type receipt_type DEFAULT '온라인',
@@ -99,8 +99,15 @@ CREATE TABLE public.tickets (
     requester_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL, -- 호환성 유지
     end_date DATE,
-    initial_end_date DATE, -- 최초 등록 시 종료일 보존
-    confirmed_end_date DATE, -- 운영진이 확정한 최종 종료일
+    initial_end_date DATE, -- 고객 요청 희망종료일
+    confirmed_end_date DATE, -- 운영진이 확정한 종료예정일
+    delayed_end_date DATE, -- 연기승인종료일
+    delay_status request_status, -- 연기 요청 상태
+    processing_delay_reason TEXT, -- 처리 연기 사유
+    delay_reason TEXT, -- 연기 사유
+    delay_rejection_reason TEXT, -- 연기 반려 사유
+    complete_status request_status, -- 완료 요청 상태
+    complete_rejection_reason TEXT, -- 완료 반려 사유
     is_emergency BOOLEAN DEFAULT FALSE,
     emergency_date DATE,
     emergency_reason TEXT,
@@ -141,6 +148,15 @@ CREATE TABLE public.chats (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE public.ticket_history (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    ticket_id UUID REFERENCES public.tickets(id) ON DELETE CASCADE,
+    type TEXT NOT NULL, -- 이벤트 타입 (예: WAITING, ACCEPTED, COMPLETE_REQUESTED 등)
+    actor_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 COMMENT ON TABLE public.chats IS '티켓 내 모든 소통 내역. 운영진이 작성한 첫 메시지는 조치 계획으로 UI에서 별도 관리됨';
 
 -- 6. 테스트 데이터 삽입
@@ -161,11 +177,11 @@ FROM public.projects p
 CROSS JOIN public.profiles pr;
 
 -- 9. 샘플 티켓
-INSERT INTO public.tickets (title, description, status, project_id, requester_id) VALUES
-('로그인 기능 구현', '사용자 로그인 기능 구현 및 테스트', 'IN_PROGRESS',
+INSERT INTO public.tickets (description, status, project_id, requester_id) VALUES
+('사용자 로그인 기능 구현 및 테스트', 'IN_PROGRESS',
  (SELECT id FROM public.projects LIMIT 1),
  (SELECT id FROM public.profiles WHERE username = 'customer')),
-('UI 디자인 개선', '대시보드 UI 개선 작업', 'WAITING',
+('대시보드 UI 개선 작업', 'WAITING',
  (SELECT id FROM public.projects LIMIT 1),
  (SELECT id FROM public.profiles WHERE username = 'customer'));
 

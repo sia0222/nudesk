@@ -10,14 +10,14 @@ const processTicketStatus = (ticket: any) => {
 
   const today = startOfDay(new Date());
   // 연기 종료일자가 승인된 상태라면 그것을 최우선 기준으로 사용
-  // 그다음 확정 종료일자, 마지막으로 최초 종료일자를 기준으로 지연 여부 판단
+  // 그다음 종료예정일, 마지막으로 희망종료일을 기준으로 지연 여부 판단
   const targetDate = ticket.delay_status === 'APPROVED' && ticket.delayed_end_date
     ? startOfDay(new Date(ticket.delayed_end_date))
     : (ticket.confirmed_end_date 
         ? startOfDay(new Date(ticket.confirmed_end_date)) 
         : (ticket.initial_end_date ? startOfDay(new Date(ticket.initial_end_date)) : null));
 
-  // 규칙: [대기], [접수], [진행] 상태인데 종료일자(또는 확정종료일자)가 현재 일자보다 적을 때(지났을 때) 지연으로 변경
+  // 규칙: [대기], [접수], [진행] 상태인데 종료일자(또는 종료예정일)가 현재 일자보다 적을 때(지났을 때) 지연으로 변경
   if (targetDate && (ticket.status === 'WAITING' || ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS')) {
     if (today > targetDate) {
       return {
@@ -59,7 +59,7 @@ export function useTickets(filters?: any) {
         .select(`
           *,
           requester:requester_id(full_name, username),
-          project:project_id(name),
+          project:project_id(name, customer:customer_id(company_name)),
           assignees:ticket_assignees(user_id, profiles(full_name, username))
         `)
         .order('created_at', { ascending: false })
@@ -136,6 +136,13 @@ export function useCreateTicket() {
 
       if (ticketError) throw ticketError
 
+      // 1-1. 히스토리 기록 (대기 또는 접수)
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticket.id,
+        type: ticket.status,
+        actor_id: session.userId
+      }])
+
       // 2. 다중 담당자 배정
       if (assigned_to_ids && assigned_to_ids.length > 0) {
         const assignees = assigned_to_ids.map((userId: string) => ({
@@ -180,6 +187,10 @@ export function useTicket(id: string) {
             file_urls,
             created_at,
             sender:sender_id(id, full_name, username, role)
+          ),
+          history:ticket_history(
+            *,
+            actor:actor_id(full_name, role)
           )
         `)
         .eq('id', id)
@@ -193,11 +204,40 @@ export function useTicket(id: string) {
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         )
       }
+
+      // 히스토리 시간순 정렬
+      if (data.history) {
+        data.history.sort((a: any, b: any) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+      }
       
       // 단일 티켓에 자동 지연 로직 적용
       return processTicketStatus(data)
     },
     enabled: !!id,
+  })
+}
+
+export function useTicketHistory(ticketId: string) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['ticket-history', ticketId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ticket_history')
+        .select(`
+          *,
+          actor:actor_id(full_name, role)
+        `)
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      return data
+    },
+    enabled: !!ticketId,
   })
 }
 
@@ -240,12 +280,22 @@ export function useUpdateTicketStatus() {
 
   return useMutation({
     mutationFn: async ({ ticketId, status }: { ticketId: string, status: string }) => {
+      const session = getCurrentSession()
+      
       const { error } = await supabase
         .from('tickets')
         .update({ status })
         .eq('id', ticketId)
 
       if (error) throw error
+
+      // 히스토리 기록
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: status,
+        actor_id: session?.userId
+      }])
+
       return { ticketId, status }
     },
     onSuccess: (data) => {
@@ -263,15 +313,18 @@ export function useAssignStaffAndAccept() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ ticketId, staffIds, message, endDate }: { ticketId: string, staffIds: string[], message: string, endDate?: string }) => {
+    mutationFn: async ({ ticketId, staffIds, message, endDate, delayReason }: { ticketId: string, staffIds: string[], message: string, endDate?: string, delayReason?: string }) => {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
-      // 1. 상태를 'ACCEPTED'로 변경 및 확정 종료일자 업데이트
+      // 1. 상태를 'ACCEPTED'로 변경 및 종료예정일 업데이트
       const updateData: any = { status: 'ACCEPTED' }
       if (endDate) {
-        updateData.confirmed_end_date = endDate // 확정 종료일자 컬럼에 저장
+        updateData.confirmed_end_date = endDate // 종료예정일 컬럼에 저장
         updateData.end_date = endDate // 실제 시스템 종료일도 업데이트
+      }
+      if (delayReason) {
+        updateData.processing_delay_reason = delayReason
       }
 
       const { error: ticketError } = await supabase
@@ -280,6 +333,14 @@ export function useAssignStaffAndAccept() {
         .eq('id', ticketId)
 
       if (ticketError) throw ticketError
+
+      // 1-1. 히스토리 기록 (접수)
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'ACCEPTED',
+        actor_id: session.userId,
+        metadata: endDate ? { confirmed_end_date: endDate } : null
+      }])
 
       // 2. 인력 배치 (ticket_assignees)
       if (staffIds.length > 0) {
@@ -323,15 +384,18 @@ export function useStartWork() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ ticketId, message, file_urls, staffIds, endDate }: { ticketId: string, message: string, file_urls?: string[], staffIds?: string[], endDate?: string }) => {
+    mutationFn: async ({ ticketId, message, file_urls, staffIds, endDate, delayReason }: { ticketId: string, message: string, file_urls?: string[], staffIds?: string[], endDate?: string, delayReason?: string }) => {
       const session = getCurrentSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
-      // 1. 상태를 'IN_PROGRESS'로 변경 및 확정 종료일자 업데이트
+      // 1. 상태를 'IN_PROGRESS'로 변경 및 종료예정일 업데이트
       const updateData: any = { status: 'IN_PROGRESS' }
       if (endDate) {
-        updateData.confirmed_end_date = endDate // 확정 종료일자 컬럼에 저장
+        updateData.confirmed_end_date = endDate // 종료예정일 컬럼에 저장
         updateData.end_date = endDate // 실제 시스템 종료일도 업데이트
+      }
+      if (delayReason) {
+        updateData.processing_delay_reason = delayReason
       }
 
       const { error: ticketError } = await supabase
@@ -340,6 +404,14 @@ export function useStartWork() {
         .eq('id', ticketId)
 
       if (ticketError) throw ticketError
+
+      // 1-1. 히스토리 기록 (진행)
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'IN_PROGRESS',
+        actor_id: session.userId,
+        metadata: endDate ? { confirmed_end_date: endDate } : null
+      }])
 
       // 2. 인력 배치가 필요한 경우 (고객 접수 건)
       if (staffIds && staffIds.length > 0) {
@@ -382,17 +454,27 @@ export function useRequestDelay() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ ticketId, requestedDate }: { ticketId: string, requestedDate: string }) => {
+    mutationFn: async ({ ticketId, requestedDate, reason }: { ticketId: string, requestedDate: string, reason: string }) => {
+      const session = getCurrentSession()
       const { error } = await supabase
         .from('tickets')
         .update({
           delay_status: 'PENDING',
           delay_requested_date: requestedDate,
+          delay_reason: reason,
           delay_rejection_reason: null
         })
         .eq('id', ticketId)
 
       if (error) throw error
+
+      // 히스토리 기록
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'DELAY_REQUESTED',
+        actor_id: session?.userId,
+        metadata: { requested_date: requestedDate, reason }
+      }])
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
@@ -410,16 +492,26 @@ export function useApproveDelay() {
 
   return useMutation({
     mutationFn: async ({ ticketId, delayedDate }: { ticketId: string, delayedDate: string }) => {
+      const session = getCurrentSession()
       const { error } = await supabase
         .from('tickets')
         .update({
           delay_status: 'APPROVED',
           delayed_end_date: delayedDate,
+          confirmed_end_date: delayedDate, // 종료예정일(confirmed_end_date)도 승인된 날짜로 변경
           end_date: delayedDate // 기능적으로 종료일 업데이트
         })
         .eq('id', ticketId)
 
       if (error) throw error
+
+      // 히스토리 기록
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'DELAY_APPROVED',
+        actor_id: session?.userId,
+        metadata: { delayed_date: delayedDate }
+      }])
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
@@ -437,6 +529,7 @@ export function useRejectDelay() {
 
   return useMutation({
     mutationFn: async ({ ticketId, reason }: { ticketId: string, reason: string }) => {
+      const session = getCurrentSession()
       const { error } = await supabase
         .from('tickets')
         .update({
@@ -446,10 +539,128 @@ export function useRejectDelay() {
         .eq('id', ticketId)
 
       if (error) throw error
+
+      // 히스토리 기록
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'DELAY_REJECTED',
+        actor_id: session?.userId,
+        metadata: { reason }
+      }])
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
       toast.success('연기 요청이 반려되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`반려 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useRequestCompletion() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId }: { ticketId: string }) => {
+      const session = getCurrentSession()
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          status: 'REQUESTED',
+          complete_status: 'PENDING',
+          complete_rejection_reason: null
+        })
+        .eq('id', ticketId)
+
+      if (error) throw error
+
+      // 히스토리 기록
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'COMPLETE_REQUESTED',
+        actor_id: session?.userId
+      }])
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      toast.success('완료 승인 요청이 전송되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`완료 요청 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useApproveCompletion() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId }: { ticketId: string }) => {
+      const session = getCurrentSession()
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          status: 'COMPLETED',
+          complete_status: 'APPROVED',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', ticketId)
+
+      if (error) throw error
+
+      // 히스토리 기록
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'COMPLETED',
+        actor_id: session?.userId
+      }])
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() })
+      toast.success('업무가 완료 처리되었습니다.')
+    },
+    onError: (error: any) => {
+      toast.error(`완료 승인 실패: ${error.message}`)
+    }
+  })
+}
+
+export function useRejectCompletion() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, reason }: { ticketId: string, reason: string }) => {
+      const session = getCurrentSession()
+      
+      // 상태를 다시 'IN_PROGRESS'로 돌림 (또는 기존 상태가 DELAYED였다면 지연으로 돌려야 하나, 
+      // 현재 로직상 IN_PROGRESS로 돌려도 processTicketStatus가 다시 DELAYED로 만들 것임)
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          status: 'IN_PROGRESS',
+          complete_status: 'REJECTED',
+          complete_rejection_reason: reason
+        })
+        .eq('id', ticketId)
+
+      if (error) throw error
+
+      // 히스토리 기록
+      await supabase.from('ticket_history').insert([{
+        ticket_id: ticketId,
+        type: 'COMPLETE_REJECTED',
+        actor_id: session?.userId,
+        metadata: { reason }
+      }])
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticketId) })
+      toast.success('완료 요청이 반려되었습니다.')
     },
     onError: (error: any) => {
       toast.error(`반려 실패: ${error.message}`)

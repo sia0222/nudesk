@@ -13,8 +13,8 @@ globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/u
 
 ## 2. Date Management (종료일 관리)
 
-- **Initial End Date (`initial_end_date`)**: The date requested by the customer during registration. This value must **never** be modified.
-- **Confirmed End Date (`confirmed_end_date`)**: The final deadline confirmed by the Admin/Staff when starting work.
+- **Initial End Date (`initial_end_date`)**: The date requested by the customer during registration. This value must **never** be modified. (UI: 희망종료일)
+- **Confirmed End Date (`confirmed_end_date`)**: The final deadline confirmed by the Admin/Staff when starting work. (UI: 종료예정일)
 - **Delayed End Date (`delayed_end_date`)**: The new deadline approved by the customer after a delay request.
 - **Functional Target Date**:
     1. If `delayed_end_date` exists (approved), use it.
@@ -28,21 +28,34 @@ globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/u
         - If the Admin/Staff chose a new date, save it to `confirmed_end_date`.
         - If no date was chosen (or the UI was hidden), automatically copy `initial_end_date` to `confirmed_end_date`.
 
-## 3. Delay Request Logic (연기 요청 로직)
+- **Delay Request Logic (연기 요청 로직)**:
+    - **Authority**: Only `ADMIN` and `STAFF` can request a delay.
+    - **One-time Limit**: Delay request is allowed only **once** per ticket.
+    - **Workflow**:
+        1. Admin/Staff requests delay via a calendar (must be after current deadline).
+        2. **Reason Required**: A detailed reason for the delay must be provided in a textarea.
+        3. Status becomes `delay_status = 'PENDING'`.
+        4. **Button Visibility**: While a delay request is `PENDING`, the **"Completion Request"** button is hidden.
+        5. Customer sees approval/rejection buttons.
+        6. **Approval**: New date saved to `delayed_end_date` and **also updates** `confirmed_end_date` (종료예정일). `delay_status = 'APPROVED'`, and functional `end_date` updated.
+        7. **Rejection**: Admin/Staff must provide a reason. Reason saved to `delay_rejection_reason`, `delay_status = 'REJECTED'`.
+    - **Display**:
+        - **Processing Delay Reason (처리 연기 사유)**: If the deadline is changed during acceptance/start, the reason is displayed in the Left Panel.
+        - **Delay Request Reason (연기 사유)**: Reasons from formal delay requests and their rejection reasons are displayed separately in the Left Panel.
 
-- **Authority**: Only `ADMIN` and `STAFF` can request a delay.
-- **Visibility**: 
-    - [Delay Request] and [Completion Request] buttons are only visible when the status is `IN_PROGRESS`, `DELAYED`, or `REQUESTED`.
-    - **One-time Limitation**: The [Delay Request] button is only visible if a delay has never been requested for that ticket (`delay_status` is null). Once requested, it will never be shown again regardless of the outcome (Approved/Rejected).
+## 3. Completion Request Logic (완료 요청 로직)
+
 - **Workflow**:
-    1. Admin/Staff requests delay via a calendar (must be after current deadline).
-    2. Status becomes `delay_status = 'PENDING'`.
-    3. Customer sees approval/rejection buttons.
-    4. **Approval**: New date saved to `delayed_end_date`, `delay_status = 'APPROVED'`, and functional `end_date` updated.
-    5. **Rejection**: Admin/Staff must provide a reason. Reason saved to `delay_rejection_reason`, `delay_status = 'REJECTED'`.
-    6. **Display**: Rejection reason is displayed in the Left Panel below Emergency Reason.
+    1. Admin/Staff requests completion when work is finished.
+    2. Status becomes `status = 'REQUESTED'` and `complete_status = 'PENDING'`.
+    3. **Button Visibility**: While a completion request is `PENDING`, the **"Delay Request"** button is hidden.
+    4. Customer sees approve/reject buttons.
+    5. **Approval**: Status becomes `COMPLETED`, `complete_status = 'APPROVED'`. Both buttons disappear.
+    6. **Rejection**: Admin/Staff must provide a reason. Status returns to `IN_PROGRESS`, `complete_status = 'REJECTED'`. Both buttons reappear (if delay was never used).
+- **Display**:
+    - **Completion Rejection Reason (완료 반려 사유)**: Displayed in the Left Panel as a **Red card** when rejected.
 
-## 3. Message Distinction (메시지 구분)
+## 4. Message Distinction (메시지 구분)
 
 - **Action Plan (조치 계획)**:
     - The first message sent by an Admin/Staff in `ACCEPTED` status.
@@ -54,18 +67,30 @@ globs: src/app/dashboard/tickets/**/*.tsx, src/hooks/use-tickets.ts, src/hooks/u
     - Font Size: `text-base` (16px) for message body.
     - Auto-scroll to bottom on new messages.
 
-## 4. UI/UX Standards
+## 5. Timeline & History (타임라인 및 히스토리)
+
+- **History Tracking**: Every status change and request (delay, completion) is recorded in the `ticket_history` table with a timestamp (`created_at`) and the actor who performed the action.
+- **Dynamic Timeline**: The progress section on the ticket detail page is rendered as a dynamic timeline based on the actual history of the ticket.
+- **Icons**:
+    - `WAITING`: Clock (Orange)
+    - `ACCEPTED`: Bookmark (Green)
+    - `IN_PROGRESS`: Zap (Blue)
+    - `DELAY_REQUESTED`: Calendar (Blue)
+    - `COMPLETE_REQUESTED`: Send (Navy)
+    - `COMPLETED`: Star (Gray)
+
+## 6. UI/UX Standards
 
 - **Page Layout**:
     - `PageContainer`: No vertical padding (`py-0`).
     - Standard Border: `border-zinc-100`.
     - Standard Shadow: `shadow-[0_8px_30px_rgba(0,0,0,0.02)]`.
 - **List Page (접수 리스트)**:
-    - Card layout with `line-clamp` for title (1 line) and content (2 lines).
-    - Display **Initial End Date (최초 희망 종료일)** and **Confirmed End Date (확정 종료일)**.
+    - Card layout with `line-clamp-2` for content (description).
+    - Display **Initial End Date (희망종료일)** and **Confirmed End Date (종료예정일)**.
 - **Ticket Detail (업무 상세)**:
-    - Progress Bar: Displays `[Percentage]% / [Status Label]` (e.g., `75% / 진행`).
-    - Title Size: `text-xl font-black` (20px).
+    - **Timeline**: Replaces the progress bar. Shows the path taken (including rejections/delays) with icons and timestamps. Base steps (대기, 접수, 진행, 완료) are always shown as the backbone.
+    - Status/Percentage: These indicators are removed in favor of the timeline view.
     - Main Content Body: `text-lg` (18px).
     - Header Meta: `Company | Date` (Gray: `zinc-500/400`).
     - Urgent Reason: Separate small card with `Zap` icon, horizontal layout.
